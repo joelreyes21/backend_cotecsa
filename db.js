@@ -1,17 +1,19 @@
-const mysql = require('mysql2');
+const mysql = require("mysql2");
 
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'messi1021',
-  database: 'isp_empresa'
+const db = mysql.createPool({
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  port: process.env.MYSQLPORT
 });
 
-db.connect(err => {
+db.getConnection((err, connection) => {
   if (err) {
-    console.error('❌ Error conectando a MySQL:', err);
+    console.error("❌ Error conectando a MySQL en Railway:", err);
   } else {
-    console.log('✅ Conectado a MySQL');
+    console.log("✅ Conectado a MySQL Railway");
+    connection.release();
   }
 });
 

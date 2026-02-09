@@ -10,12 +10,18 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 /* =========================
+   RUTA PARA RAILWAY
+========================= */
+app.get("/", (req, res) => {
+  res.send("Backend COTECSA funcionando ✔️");
+});
+
+/* =========================
    ENDPOINT DE REGISTRO
 ========================= */
 app.post("/register", async (req, res) => {
   const { nombre, correo, telefono, password } = req.body;
 
-  // 🔎 Validaciones básicas
   if (!nombre || !correo || !telefono || !password) {
     return res.status(400).json({ error: "Todos los campos son obligatorios" });
   }
@@ -30,7 +36,6 @@ app.post("/register", async (req, res) => {
 
     db.query(sql, [nombre, correo, telefono, hash], err => {
       if (err) {
-        // 📧 Correo duplicado
         if (err.code === "ER_DUP_ENTRY") {
           return res.status(400).json({ error: "El correo ya está registrado" });
         }
@@ -116,7 +121,6 @@ app.get("/usuarios", (req, res) => {
 app.delete("/usuarios/:id", (req, res) => {
   const { id } = req.params;
 
-  // 1️⃣ Buscar usuario
   db.query(
     "SELECT rol FROM usuarios WHERE id_usuario = ?",
     [id],
@@ -132,7 +136,6 @@ app.delete("/usuarios/:id", (req, res) => {
 
       const usuario = rows[0];
 
-      // 2️⃣ Contar admins
       db.query(
         "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'admin'",
         (err, result) => {
@@ -143,14 +146,12 @@ app.delete("/usuarios/:id", (req, res) => {
 
           const admins = result[0].total;
 
-          // 3️⃣ Proteger último admin
           if (usuario.rol === "admin" && admins <= 1) {
             return res.status(400).json({
               error: "Debe existir al menos un administrador"
             });
           }
 
-          // 4️⃣ Eliminar
           db.query(
             "DELETE FROM usuarios WHERE id_usuario = ?",
             [id],
@@ -182,7 +183,6 @@ app.put("/usuarios/:id/rol", (req, res) => {
     return res.status(400).json({ error: "Rol inválido" });
   }
 
-  // Contar admins actuales
   db.query(
     "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'admin'",
     (err, result) => {
@@ -193,14 +193,12 @@ app.put("/usuarios/:id/rol", (req, res) => {
 
       const admins = result[0].total;
 
-      // No permitir quedar sin admins
       if (admins <= 1 && rol !== "admin") {
         return res.status(400).json({
           error: "Debe existir al menos un administrador"
         });
       }
 
-      // Actualizar rol
       db.query(
         "UPDATE usuarios SET rol = ? WHERE id_usuario = ?",
         [rol, id],
@@ -223,5 +221,5 @@ app.put("/usuarios/:id/rol", (req, res) => {
    INICIAR SERVIDOR
 ========================= */
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor desplegado en Railway (puerto ${PORT})`);
 });

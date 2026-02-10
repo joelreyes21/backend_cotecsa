@@ -51,9 +51,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-/* =========================
-   ENDPOINT DE LOGIN
-========================= */
+
 app.post("/login", (req, res) => {
   const { correo, password } = req.body;
 

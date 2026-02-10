@@ -7,13 +7,14 @@ const db = mysql.createPool({
   database: process.env.MYSQLDATABASE,
   port: process.env.MYSQLPORT,
   ssl: {
-    rejectUnauthorized: true
+    // Railway usa certificados auto-firmados → así evitamos el error HANDSHAKE_SSL_ERROR
+    rejectUnauthorized: false
   }
 });
 
 db.getConnection((err, connection) => {
   if (err) {
-    console.error("❌ Error conectando a MySQL en Railway:", err);
+    console.error("❌ Error conectando a MySQL Railway:", err);
   } else {
     console.log("✅ Conectado a MySQL Railway");
     connection.release();

@@ -6,14 +6,14 @@ const db = mysql.createPool({
   password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQLDATABASE,
   port: process.env.MYSQLPORT,
-  ssl: { rejectUnauthorized: false }
+  ssl: true  // <-- ESTA ES LA CLAVE
 });
 
 db.getConnection((err, connection) => {
   if (err) {
-    console.error("❌ Error conectando a MySQL en Railway:", err);
+    console.error("❌ Error conectando a MySQL Railway:", err);
   } else {
-    console.log("✅ Conectado a MySQL Railway");
+    console.log("✅ Conexión exitosa a MySQL Railway");
     connection.release();
   }
 });

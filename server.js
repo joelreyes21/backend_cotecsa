@@ -234,6 +234,82 @@ app.put("/usuarios/:id/rol", (req, res) => {
 });
 
 /* =========================
+   PLANES COTECSA
+========================= */
+
+// Obtener todos los planes
+app.get("/api/planes", (req, res) => {
+  const sql = "SELECT * FROM planes ORDER BY fecha_creacion DESC";
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Error obteniendo planes:", err);
+      return res.status(500).json({ error: "Error obteniendo planes" });
+    }
+    res.json(results);
+  });
+});
+
+// Crear nuevo plan
+app.post("/api/planes", (req, res) => {
+  const { nombre, velocidad, precio, descripcion } = req.body;
+
+  if (!nombre || !velocidad || !precio) {
+    return res.status(400).json({ error: "Campos obligatorios" });
+  }
+
+  const sql = `
+    INSERT INTO planes (nombre, velocidad, precio, descripcion, activo)
+    VALUES (?, ?, ?, ?, 1)
+  `;
+
+  db.query(sql, [nombre, velocidad, precio, descripcion], (err) => {
+    if (err) {
+      console.error("Error insertando plan:", err);
+      return res.status(500).json({ error: "Error guardando plan" });
+    }
+
+    res.json({ mensaje: "Plan creado correctamente" });
+  });
+});
+
+// Actualizar plan
+app.put("/api/planes/:id", (req, res) => {
+  const id = req.params.id;
+  const { nombre, velocidad, precio, descripcion, activo } = req.body;
+
+  const sql = `
+    UPDATE planes 
+    SET nombre=?, velocidad=?, precio=?, descripcion=?, activo=? 
+    WHERE id_plan=?
+  `;
+
+  db.query(sql, [nombre, velocidad, precio, descripcion, activo, id], (err) => {
+    if (err) {
+      console.error("Error actualizando plan:", err);
+      return res.status(500).json({ error: "Error actualizando plan" });
+    }
+
+    res.json({ mensaje: "Plan actualizado" });
+  });
+});
+
+// Eliminar plan
+app.delete("/api/planes/:id", (req, res) => {
+  const id = req.params.id;
+
+  db.query("DELETE FROM planes WHERE id_plan=?", [id], (err) => {
+    if (err) {
+      console.error("Error eliminando plan:", err);
+      return res.status(500).json({ error: "Error eliminando plan" });
+    }
+
+    res.json({ mensaje: "Plan eliminado" });
+  });
+});
+
+
+/* =========================
    INICIAR SERVIDOR
 ========================= */
 app.listen(PORT, () => {

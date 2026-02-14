@@ -10,14 +10,14 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 /* =========================
-   RUTA PARA RAILWAY
+   RUTA PRINCIPAL
 ========================= */
 app.get("/", (req, res) => {
   res.send("Backend COTECSA funcionando ✔️");
 });
 
 /* =========================
-   ENDPOINT DE REGISTRO
+   REGISTRO
 ========================= */
 app.post("/register", async (req, res) => {
   const { nombre, correo, telefono, password } = req.body;
@@ -45,13 +45,16 @@ app.post("/register", async (req, res) => {
 
       res.json({ mensaje: "Usuario registrado correctamente" });
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error del servidor" });
   }
 });
 
-
+/* =========================
+   LOGIN
+========================= */
 app.post("/login", (req, res) => {
   const { correo, password } = req.body;
 
@@ -94,6 +97,7 @@ app.post("/login", (req, res) => {
    OBTENER USUARIOS
 ========================= */
 app.get("/usuarios", (req, res) => {
+
   const sql = `
     SELECT
       id_usuario AS id,
@@ -109,6 +113,7 @@ app.get("/usuarios", (req, res) => {
       console.error(err);
       return res.status(500).json({ error: "Error al obtener usuarios" });
     }
+
     res.json(results);
   });
 });
@@ -123,10 +128,8 @@ app.delete("/usuarios/:id", (req, res) => {
     "SELECT rol FROM usuarios WHERE id_usuario = ?",
     [id],
     (err, rows) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Error de base de datos" });
-      }
+
+      if (err) return res.status(500).json({ error: "Error DB" });
 
       if (rows.length === 0) {
         return res.status(404).json({ error: "Usuario no encontrado" });
@@ -137,10 +140,8 @@ app.delete("/usuarios/:id", (req, res) => {
       db.query(
         "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'admin'",
         (err, result) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).json({ error: "Error de base de datos" });
-          }
+
+          if (err) return res.status(500).json({ error: "Error DB" });
 
           const admins = result[0].total;
 
@@ -154,11 +155,9 @@ app.delete("/usuarios/:id", (req, res) => {
             "DELETE FROM usuarios WHERE id_usuario = ?",
             [id],
             err => {
+
               if (err) {
-                console.error(err);
-                return res
-                  .status(500)
-                  .json({ error: "Error al eliminar usuario" });
+                return res.status(500).json({ error: "Error al eliminar usuario" });
               }
 
               res.json({ mensaje: "Usuario eliminado correctamente" });
@@ -171,9 +170,10 @@ app.delete("/usuarios/:id", (req, res) => {
 });
 
 /* =========================
-   ACTUALIZAR ROL
+   ACTUALIZAR ROL (VERSIÓN CORRECTA)
 ========================= */
 app.put("/usuarios/:id/rol", (req, res) => {
+
   const { id } = req.params;
   const { rol } = req.body;
 
@@ -182,33 +182,51 @@ app.put("/usuarios/:id/rol", (req, res) => {
   }
 
   db.query(
-    "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'admin'",
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Error de base de datos" });
+    "SELECT rol FROM usuarios WHERE id_usuario = ?",
+    [id],
+    (err, rows) => {
+
+      if (err) return res.status(500).json({ error: "Error DB" });
+
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
       }
 
-      const admins = result[0].total;
-
-      if (admins <= 1 && rol !== "admin") {
-        return res.status(400).json({
-          error: "Debe existir al menos un administrador"
-        });
-      }
+      const usuarioActual = rows[0];
 
       db.query(
-        "UPDATE usuarios SET rol = ? WHERE id_usuario = ?",
-        [rol, id],
-        err => {
-          if (err) {
-            console.error(err);
-            return res
-              .status(500)
-              .json({ error: "No se pudo actualizar rol" });
+        "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'admin'",
+        (err, result) => {
+
+          if (err) return res.status(500).json({ error: "Error DB" });
+
+          const admins = result[0].total;
+
+          // 🔥 SOLO bloquear si estás quitando el último admin
+          if (
+            usuarioActual.rol === "admin" &&
+            admins <= 1 &&
+            rol !== "admin"
+          ) {
+            return res.status(400).json({
+              error: "Debe existir al menos un administrador"
+            });
           }
 
-          res.json({ ok: true });
+          db.query(
+            "UPDATE usuarios SET rol = ? WHERE id_usuario = ?",
+            [rol, id],
+            err => {
+
+              if (err) {
+                return res.status(500).json({
+                  error: "No se pudo actualizar rol"
+                });
+              }
+
+              res.json({ ok: true });
+            }
+          );
         }
       );
     }

@@ -4,7 +4,21 @@ const bcrypt = require("bcryptjs");
 const db = require("./db");
 
 const app = express();
-app.use(cors());
+
+/* =========================
+   CORS CORRECTO PARA RAILWAY
+========================= */
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  next();
+});
+
+app.options("*", (req, res) => {
+  res.sendStatus(200);
+});
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;

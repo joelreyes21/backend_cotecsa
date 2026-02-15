@@ -1,4 +1,4 @@
-const API = "https://outstanding-possibility-production.up.railway.app/api/planes";
+const API = "/api/planes";
 
 let editId = null;
 

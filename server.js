@@ -2,41 +2,23 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const db = require("./db");
-const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-/* =========================
-   MIDDLEWARES
-========================= */
-
-// CORS funcionando correctamente
-app.use(cors({
-  origin: true,
-  methods: ["GET","POST","PUT","DELETE"],
-  allowedHeaders: ["Content-Type"]
-}));
-
-app.options("*", cors());
-
+app.use(cors());
 app.use(express.json());
 
-// SERVIR FRONTEND DESDE /public
-app.use(express.static(path.join(__dirname, "public")));
+const PORT = process.env.PORT || 3000;
 
 /* =========================
    RUTA PRINCIPAL
 ========================= */
-
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "planes.html"));
+  res.send("Backend COTECSA funcionando ✔️");
 });
 
 /* =========================
    REGISTRO
 ========================= */
-
 app.post("/register", async (req, res) => {
   const { nombre, correo, telefono, password } = req.body;
 
@@ -52,11 +34,12 @@ app.post("/register", async (req, res) => {
       VALUES (?, ?, ?, ?)
     `;
 
-    db.query(sql, [nombre, correo, telefono, hash], (err) => {
+    db.query(sql, [nombre, correo, telefono, hash], err => {
       if (err) {
         if (err.code === "ER_DUP_ENTRY") {
           return res.status(400).json({ error: "El correo ya está registrado" });
         }
+        console.error(err);
         return res.status(500).json({ error: "Error al registrar usuario" });
       }
 
@@ -64,6 +47,7 @@ app.post("/register", async (req, res) => {
     });
 
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Error del servidor" });
   }
 });
@@ -71,7 +55,6 @@ app.post("/register", async (req, res) => {
 /* =========================
    LOGIN
 ========================= */
-
 app.post("/login", (req, res) => {
   const { correo, password } = req.body;
 
@@ -82,7 +65,10 @@ app.post("/login", (req, res) => {
   const sql = "SELECT * FROM usuarios WHERE correo = ?";
 
   db.query(sql, [correo], async (err, results) => {
-    if (err) return res.status(500).json({ error: "Error del servidor" });
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Error del servidor" });
+    }
 
     if (results.length === 0) {
       return res.status(401).json({ error: "Usuario no encontrado" });
@@ -108,10 +94,10 @@ app.post("/login", (req, res) => {
 });
 
 /* =========================
-   USUARIOS
+   OBTENER USUARIOS
 ========================= */
-
 app.get("/usuarios", (req, res) => {
+
   const sql = `
     SELECT
       id_usuario AS id,
@@ -123,52 +109,148 @@ app.get("/usuarios", (req, res) => {
   `;
 
   db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ error: "Error al obtener usuarios" });
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Error al obtener usuarios" });
+    }
+
     res.json(results);
   });
 });
 
+/* =========================
+   ELIMINAR USUARIO
+========================= */
 app.delete("/usuarios/:id", (req, res) => {
+  const { id } = req.params;
+
   db.query(
-    "DELETE FROM usuarios WHERE id_usuario = ?",
-    [req.params.id],
-    (err) => {
-      if (err) return res.status(500).json({ error: "Error al eliminar usuario" });
-      res.json({ mensaje: "Usuario eliminado correctamente" });
+    "SELECT rol FROM usuarios WHERE id_usuario = ?",
+    [id],
+    (err, rows) => {
+
+      if (err) return res.status(500).json({ error: "Error DB" });
+
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      const usuario = rows[0];
+
+      db.query(
+        "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'admin'",
+        (err, result) => {
+
+          if (err) return res.status(500).json({ error: "Error DB" });
+
+          const admins = result[0].total;
+
+          if (usuario.rol === "admin" && admins <= 1) {
+            return res.status(400).json({
+              error: "Debe existir al menos un administrador"
+            });
+          }
+
+          db.query(
+            "DELETE FROM usuarios WHERE id_usuario = ?",
+            [id],
+            err => {
+
+              if (err) {
+                return res.status(500).json({ error: "Error al eliminar usuario" });
+              }
+
+              res.json({ mensaje: "Usuario eliminado correctamente" });
+            }
+          );
+        }
+      );
     }
   );
 });
 
+/* =========================
+   ACTUALIZAR ROL (VERSIÓN CORRECTA)
+========================= */
 app.put("/usuarios/:id/rol", (req, res) => {
+
+  const { id } = req.params;
   const { rol } = req.body;
 
+  if (!["admin", "cliente"].includes(rol)) {
+    return res.status(400).json({ error: "Rol inválido" });
+  }
+
   db.query(
-    "UPDATE usuarios SET rol = ? WHERE id_usuario = ?",
-    [rol, req.params.id],
-    (err) => {
-      if (err) return res.status(500).json({ error: "No se pudo actualizar rol" });
-      res.json({ ok: true });
+    "SELECT rol FROM usuarios WHERE id_usuario = ?",
+    [id],
+    (err, rows) => {
+
+      if (err) return res.status(500).json({ error: "Error DB" });
+
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      const usuarioActual = rows[0];
+
+      db.query(
+        "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'admin'",
+        (err, result) => {
+
+          if (err) return res.status(500).json({ error: "Error DB" });
+
+          const admins = result[0].total;
+
+          // 🔥 SOLO bloquear si estás quitando el último admin
+          if (
+            usuarioActual.rol === "admin" &&
+            admins <= 1 &&
+            rol !== "admin"
+          ) {
+            return res.status(400).json({
+              error: "Debe existir al menos un administrador"
+            });
+          }
+
+          db.query(
+            "UPDATE usuarios SET rol = ? WHERE id_usuario = ?",
+            [rol, id],
+            err => {
+
+              if (err) {
+                return res.status(500).json({
+                  error: "No se pudo actualizar rol"
+                });
+              }
+
+              res.json({ ok: true });
+            }
+          );
+        }
+      );
     }
   );
 });
+
 /* =========================
    PLANES COTECSA
 ========================= */
 
 // Obtener todos los planes
 app.get("/api/planes", (req, res) => {
-  db.query(
-    "SELECT * FROM planes ORDER BY fecha_creacion DESC",
-    (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: "Error obteniendo planes" });
-      }
-      res.json(results);
+  const sql = "SELECT * FROM planes ORDER BY fecha_creacion DESC";
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Error obteniendo planes:", err);
+      return res.status(500).json({ error: "Error obteniendo planes" });
     }
-  );
+    res.json(results);
+  });
 });
 
-// Crear plan
+// Crear nuevo plan
 app.post("/api/planes", (req, res) => {
   const { nombre, velocidad, precio, descripcion } = req.body;
 
@@ -176,55 +258,60 @@ app.post("/api/planes", (req, res) => {
     return res.status(400).json({ error: "Campos obligatorios" });
   }
 
-  db.query(
-    `INSERT INTO planes (nombre, velocidad, precio, descripcion, activo)
-     VALUES (?, ?, ?, ?, 1)`,
-    [nombre, velocidad, precio, descripcion],
-    (err) => {
-      if (err) {
-        return res.status(500).json({ error: "Error guardando plan" });
-      }
-      res.json({ mensaje: "Plan creado correctamente" });
+  const sql = `
+    INSERT INTO planes (nombre, velocidad, precio, descripcion, activo)
+    VALUES (?, ?, ?, ?, 1)
+  `;
+
+  db.query(sql, [nombre, velocidad, precio, descripcion], (err) => {
+    if (err) {
+      console.error("Error insertando plan:", err);
+      return res.status(500).json({ error: "Error guardando plan" });
     }
-  );
+
+    res.json({ mensaje: "Plan creado correctamente" });
+  });
 });
 
 // Actualizar plan
 app.put("/api/planes/:id", (req, res) => {
+  const id = req.params.id;
   const { nombre, velocidad, precio, descripcion, activo } = req.body;
 
-  db.query(
-    `UPDATE planes 
-     SET nombre=?, velocidad=?, precio=?, descripcion=?, activo=? 
-     WHERE id_plan=?`,
-    [nombre, velocidad, precio, descripcion, activo, req.params.id],
-    (err) => {
-      if (err) {
-        return res.status(500).json({ error: "Error actualizando plan" });
-      }
-      res.json({ mensaje: "Plan actualizado" });
+  const sql = `
+    UPDATE planes 
+    SET nombre=?, velocidad=?, precio=?, descripcion=?, activo=? 
+    WHERE id_plan=?
+  `;
+
+  db.query(sql, [nombre, velocidad, precio, descripcion, activo, id], (err) => {
+    if (err) {
+      console.error("Error actualizando plan:", err);
+      return res.status(500).json({ error: "Error actualizando plan" });
     }
-  );
+
+    res.json({ mensaje: "Plan actualizado" });
+  });
 });
 
 // Eliminar plan
 app.delete("/api/planes/:id", (req, res) => {
-  db.query(
-    "DELETE FROM planes WHERE id_plan=?",
-    [req.params.id],
-    (err) => {
-      if (err) {
-        return res.status(500).json({ error: "Error eliminando plan" });
-      }
-      res.json({ mensaje: "Plan eliminado" });
+  const id = req.params.id;
+
+  db.query("DELETE FROM planes WHERE id_plan=?", [id], (err) => {
+    if (err) {
+      console.error("Error eliminando plan:", err);
+      return res.status(500).json({ error: "Error eliminando plan" });
     }
-  );
+
+    res.json({ mensaje: "Plan eliminado" });
+  });
 });
+
 
 /* =========================
    INICIAR SERVIDOR
 ========================= */
-
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en Railway puerto ${PORT}`);
+  console.log(`🚀 Servidor desplegado en Railway (puerto ${PORT})`);
 });

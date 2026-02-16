@@ -4,7 +4,16 @@ const bcrypt = require("bcryptjs");
 const db = require("./db");
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5500",
+    "http://localhost:3000",
+    "https://bisque-dunlin-728476.hostingersite.com"
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;

@@ -1,3 +1,4 @@
+console.log("🔥 VERSION NUEVA SMTP 587");
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");

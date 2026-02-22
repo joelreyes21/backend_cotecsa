@@ -1,3 +1,4 @@
+console.log("API KEY:", process.env.RESEND_API_KEY);
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");

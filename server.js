@@ -52,6 +52,14 @@ app.post("/register", async (req, res) => {
     return res.status(400).json({ error: "Todos los campos son obligatorios" });
   }
 
+    const regexTelefono = /^[389]\d{7}$/;
+
+  if (!regexTelefono.test(telefono)) {
+    return res.status(400).json({
+      error: "Número inválido. Debe tener 8 dígitos y comenzar con 3, 8 o 9"
+    });
+  }
+
   try {
 
     db.query("SELECT * FROM usuarios WHERE correo = ?", [correo], async (err, results) => {
@@ -100,6 +108,7 @@ app.post("/register", async (req, res) => {
     res.status(500).json({ error: "Error del servidor" });
   }
 });
+
 
 /* =========================
    VERIFICAR CÓDIGO

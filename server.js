@@ -1,8 +1,6 @@
-console.log("🔥 VERSION NUEVA SMTP 587");
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
-const nodemailer = require("nodemailer");
 const db = require("./db");
 
 const app = express();
@@ -21,25 +19,8 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 /* =========================
-   CONFIGURACIÓN EMAIL
+   FUNCIÓN GENERAR CÓDIGO
 ========================= */
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-transporter.verify(function (error, success) {
-  if (error) {
-    console.log("❌ ERROR SMTP:", error);
-  } else {
-    console.log("✅ SMTP listo para enviar");
-  }
-});
 
 function generarCodigo() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -48,13 +29,15 @@ function generarCodigo() {
 /* =========================
    RUTA PRINCIPAL
 ========================= */
+
 app.get("/", (req, res) => {
   res.send("Backend COTECSA funcionando ✔️");
 });
 
 /* =========================
-   REGISTRO CON VERIFICACIÓN
+   REGISTRO (SIN ENVÍO DE CORREO)
 ========================= */
+
 app.post("/register", async (req, res) => {
   const { nombre, correo, telefono, password } = req.body;
 
@@ -62,7 +45,7 @@ app.post("/register", async (req, res) => {
     return res.status(400).json({ error: "Todos los campos son obligatorios" });
   }
 
-    const regexTelefono = /^[389]\d{7}$/;
+  const regexTelefono = /^[389]\d{7}$/;
 
   if (!regexTelefono.test(telefono)) {
     return res.status(400).json({
@@ -71,7 +54,6 @@ app.post("/register", async (req, res) => {
   }
 
   try {
-
     db.query("SELECT * FROM usuarios WHERE correo = ?", [correo], async (err, results) => {
 
       if (err) return res.status(500).json({ error: "Error DB" });
@@ -88,26 +70,17 @@ app.post("/register", async (req, res) => {
         VALUES (?, ?, ?, ?, ?, false)
       `;
 
-      db.query(sql, [nombre, correo, telefono, hash, codigo], async (err) => {
+      db.query(sql, [nombre, correo, telefono, hash, codigo], (err) => {
 
         if (err) {
           console.error(err);
           return res.status(500).json({ error: "Error al registrar usuario" });
         }
 
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: correo,
-          subject: "Código de verificación COTECSA",
-          html: `
-            <h2>Bienvenido a COTECSA</h2>
-            <p>Tu código de verificación es:</p>
-            <h1>${codigo}</h1>
-            <p>Ingresa este código en la plataforma.</p>
-          `
+        res.json({
+          mensaje: "Usuario registrado correctamente",
+          codigo_verificacion: codigo
         });
-
-        res.json({ mensaje: "Código enviado al correo" });
 
       });
 
@@ -119,10 +92,10 @@ app.post("/register", async (req, res) => {
   }
 });
 
-
 /* =========================
    VERIFICAR CÓDIGO
 ========================= */
+
 app.post("/verificar-codigo", (req, res) => {
   const { correo, codigo } = req.body;
 
@@ -153,6 +126,7 @@ app.post("/verificar-codigo", (req, res) => {
 /* =========================
    LOGIN
 ========================= */
+
 app.post("/login", (req, res) => {
   const { correo, password } = req.body;
 
@@ -199,6 +173,7 @@ app.post("/login", (req, res) => {
 /* =========================
    OBTENER USUARIOS
 ========================= */
+
 app.get("/usuarios", (req, res) => {
 
   const sql = `
@@ -224,6 +199,7 @@ app.get("/usuarios", (req, res) => {
 /* =========================
    ELIMINAR USUARIO
 ========================= */
+
 app.delete("/usuarios/:id", (req, res) => {
   const { id } = req.params;
 
@@ -275,6 +251,7 @@ app.delete("/usuarios/:id", (req, res) => {
 /* =========================
    ACTUALIZAR ROL
 ========================= */
+
 app.put("/usuarios/:id/rol", (req, res) => {
 
   const { id } = req.params;
@@ -339,7 +316,6 @@ app.put("/usuarios/:id/rol", (req, res) => {
    PLANES COTECSA
 ========================= */
 
-// Obtener todos los planes
 app.get("/api/planes", (req, res) => {
   const sql = "SELECT * FROM planes ORDER BY fecha_creacion DESC";
 
@@ -352,7 +328,6 @@ app.get("/api/planes", (req, res) => {
   });
 });
 
-// Crear nuevo plan
 app.post("/api/planes", (req, res) => {
   const { nombre, velocidad, precio, descripcion } = req.body;
 
@@ -375,7 +350,6 @@ app.post("/api/planes", (req, res) => {
   });
 });
 
-// Actualizar plan
 app.put("/api/planes/:id", (req, res) => {
   const id = req.params.id;
   const { nombre, velocidad, precio, descripcion, activo } = req.body;
@@ -396,7 +370,6 @@ app.put("/api/planes/:id", (req, res) => {
   });
 });
 
-// Eliminar plan
 app.delete("/api/planes/:id", (req, res) => {
   const id = req.params.id;
 
@@ -413,6 +386,7 @@ app.delete("/api/planes/:id", (req, res) => {
 /* =========================
    INICIAR SERVIDOR
 ========================= */
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor desplegado en Railway (puerto ${PORT})`);
 });

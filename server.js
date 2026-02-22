@@ -1,9 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
+const { Resend } = require("resend");
 const db = require("./db");
 
 const app = express();
+
 app.use(cors({
   origin: [
     "http://localhost:5500",
@@ -17,6 +19,12 @@ app.use(cors({
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+
+/* =========================
+   CONFIGURACIÓN RESEND
+========================= */
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /* =========================
    FUNCIÓN GENERAR CÓDIGO
@@ -35,7 +43,7 @@ app.get("/", (req, res) => {
 });
 
 /* =========================
-   REGISTRO (SIN ENVÍO DE CORREO)
+   REGISTRO
 ========================= */
 
 app.post("/register", async (req, res) => {
@@ -70,17 +78,33 @@ app.post("/register", async (req, res) => {
         VALUES (?, ?, ?, ?, ?, false)
       `;
 
-      db.query(sql, [nombre, correo, telefono, hash, codigo], (err) => {
+      db.query(sql, [nombre, correo, telefono, hash, codigo], async (err) => {
 
         if (err) {
           console.error(err);
           return res.status(500).json({ error: "Error al registrar usuario" });
         }
 
-        res.json({
-          mensaje: "Usuario registrado correctamente",
-          codigo_verificacion: codigo
-        });
+        // 🔥 ENVÍO DE CORREO CON RESEND
+        try {
+          await resend.emails.send({
+            from: "onboarding@resend.dev",
+            to: correo,
+            subject: "Código de verificación COTECSA",
+            html: `
+              <h2>Bienvenido a COTECSA</h2>
+              <p>Tu código de verificación es:</p>
+              <h1>${codigo}</h1>
+              <p>Ingresa este código en la plataforma.</p>
+            `
+          });
+
+          res.json({ mensaje: "Código enviado al correo" });
+
+        } catch (error) {
+          console.log("❌ ERROR RESEND:", error);
+          return res.status(500).json({ error: "Error enviando correo" });
+        }
 
       });
 

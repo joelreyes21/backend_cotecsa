@@ -33,6 +33,13 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   }
 });
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log("❌ ERROR SMTP:", error);
+  } else {
+    console.log("✅ SMTP listo para enviar");
+  }
+});
 
 function generarCodigo() {
   return Math.floor(100000 + Math.random() * 900000).toString();

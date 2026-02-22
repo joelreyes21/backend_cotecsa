@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
+const nodemailer = require("nodemailer");
 const db = require("./db");
 
 const app = express();
@@ -19,6 +20,22 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 /* =========================
+   CONFIGURACIÓN EMAIL
+========================= */
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+function generarCodigo() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+/* =========================
    RUTA PRINCIPAL
 ========================= */
 app.get("/", (req, res) => {
@@ -26,7 +43,7 @@ app.get("/", (req, res) => {
 });
 
 /* =========================
-   REGISTRO
+   REGISTRO CON VERIFICACIÓN
 ========================= */
 app.post("/register", async (req, res) => {
   const { nombre, correo, telefono, password } = req.body;
@@ -36,29 +53,82 @@ app.post("/register", async (req, res) => {
   }
 
   try {
-    const hash = await bcrypt.hash(password, 10);
 
-    const sql = `
-      INSERT INTO usuarios (nombre_completo, correo, telefono, contrasena)
-      VALUES (?, ?, ?, ?)
-    `;
+    db.query("SELECT * FROM usuarios WHERE correo = ?", [correo], async (err, results) => {
 
-    db.query(sql, [nombre, correo, telefono, hash], err => {
-      if (err) {
-        if (err.code === "ER_DUP_ENTRY") {
-          return res.status(400).json({ error: "El correo ya está registrado" });
-        }
-        console.error(err);
-        return res.status(500).json({ error: "Error al registrar usuario" });
+      if (err) return res.status(500).json({ error: "Error DB" });
+
+      if (results.length > 0) {
+        return res.status(400).json({ error: "El correo ya está registrado" });
       }
 
-      res.json({ mensaje: "Usuario registrado correctamente" });
+      const hash = await bcrypt.hash(password, 10);
+      const codigo = generarCodigo();
+
+      const sql = `
+        INSERT INTO usuarios (nombre_completo, correo, telefono, contrasena, codigo_verificacion, verificado)
+        VALUES (?, ?, ?, ?, ?, false)
+      `;
+
+      db.query(sql, [nombre, correo, telefono, hash, codigo], async (err) => {
+
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Error al registrar usuario" });
+        }
+
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: correo,
+          subject: "Código de verificación COTECSA",
+          html: `
+            <h2>Bienvenido a COTECSA</h2>
+            <p>Tu código de verificación es:</p>
+            <h1>${codigo}</h1>
+            <p>Ingresa este código en la plataforma.</p>
+          `
+        });
+
+        res.json({ mensaje: "Código enviado al correo" });
+
+      });
+
     });
 
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error del servidor" });
   }
+});
+
+/* =========================
+   VERIFICAR CÓDIGO
+========================= */
+app.post("/verificar-codigo", (req, res) => {
+  const { correo, codigo } = req.body;
+
+  db.query(
+    "SELECT * FROM usuarios WHERE correo = ? AND codigo_verificacion = ?",
+    [correo, codigo],
+    (err, results) => {
+
+      if (err) return res.status(500).json({ error: "Error DB" });
+
+      if (results.length === 0) {
+        return res.status(400).json({ error: "Código incorrecto" });
+      }
+
+      db.query(
+        "UPDATE usuarios SET verificado = true, codigo_verificacion = NULL WHERE correo = ?",
+        [correo],
+        (err) => {
+          if (err) return res.status(500).json({ error: "Error actualizando usuario" });
+          res.json({ ok: true });
+        }
+      );
+
+    }
+  );
 });
 
 /* =========================
@@ -84,6 +154,11 @@ app.post("/login", (req, res) => {
     }
 
     const usuario = results[0];
+
+    if (!usuario.verificado) {
+      return res.status(403).json({ error: "Debes verificar tu correo primero" });
+    }
+
     const match = await bcrypt.compare(password, usuario.contrasena);
 
     if (!match) {
@@ -179,7 +254,7 @@ app.delete("/usuarios/:id", (req, res) => {
 });
 
 /* =========================
-   ACTUALIZAR ROL (VERSIÓN CORRECTA)
+   ACTUALIZAR ROL
 ========================= */
 app.put("/usuarios/:id/rol", (req, res) => {
 
@@ -211,7 +286,6 @@ app.put("/usuarios/:id/rol", (req, res) => {
 
           const admins = result[0].total;
 
-          // 🔥 SOLO bloquear si estás quitando el último admin
           if (
             usuarioActual.rol === "admin" &&
             admins <= 1 &&
@@ -316,7 +390,6 @@ app.delete("/api/planes/:id", (req, res) => {
     res.json({ mensaje: "Plan eliminado" });
   });
 });
-
 
 /* =========================
    INICIAR SERVIDOR

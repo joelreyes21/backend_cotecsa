@@ -11,7 +11,7 @@ app.use(cors({
   origin: [
     "http://localhost:5500",
     "http://localhost:3000",
-    "https://bisque-dunlin-728476.hostingersite.com"
+    "https://cotecsa.shop"
   ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true

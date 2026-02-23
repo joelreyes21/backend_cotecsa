@@ -353,6 +353,35 @@ app.get("/api/planes", (req, res) => {
   });
 });
 
+/* =========================
+   OBTENER PLAN POR ID
+========================= */
+
+app.get("/api/planes/:id", (req, res) => {
+
+  const id = req.params.id;
+
+  const sql = `
+    SELECT * FROM planes 
+    WHERE id_plan = ? AND activo = 1
+  `;
+
+  db.query(sql, [id], (err, results) => {
+
+    if (err) {
+      console.error("Error obteniendo plan:", err);
+      return res.status(500).json({ error: "Error obteniendo plan" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Plan no encontrado" });
+    }
+
+    res.json(results[0]);
+  });
+
+});
+
 app.post("/api/planes", (req, res) => {
   const { nombre, velocidad, precio, descripcion } = req.body;
 

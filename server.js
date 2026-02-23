@@ -89,7 +89,7 @@ app.post("/register", async (req, res) => {
         // 🔥 ENVÍO DE CORREO CON RESEND
         try {
           await resend.emails.send({
-            from: "onboarding@resend.dev",
+            from: "COTECSA <noreply@cotecsa.shop>",
             to: correo,
             subject: "Código de verificación COTECSA",
             html: `

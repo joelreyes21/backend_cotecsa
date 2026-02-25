@@ -135,12 +135,24 @@ app.post("/verificar-codigo", (req, res) => {
         return res.status(400).json({ error: "Código incorrecto" });
       }
 
+      const usuario = results[0];
+
       db.query(
         "UPDATE usuarios SET verificado = true, codigo_verificacion = NULL WHERE correo = ?",
         [correo],
         (err) => {
           if (err) return res.status(500).json({ error: "Error actualizando usuario" });
-          res.json({ ok: true });
+
+          // 🔥 AHORA DEVOLVEMOS EL USUARIO
+          res.json({
+            mensaje: "Verificación exitosa",
+            usuario: {
+              id: usuario.id_usuario,
+              nombre: usuario.nombre_completo,
+              correo: usuario.correo,
+              rol: usuario.rol
+            }
+          });
         }
       );
 

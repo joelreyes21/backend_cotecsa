@@ -580,6 +580,38 @@ error: "Error enviando correo"
 });
 
 /* =========================
+   CAMBIAR ESTADO TICKET
+========================= */
+
+app.put("/api/tickets/:id/estado", (req, res) => {
+
+const id = req.params.id;
+const { estado } = req.body;
+
+const sql = `
+UPDATE tickets
+SET estado = ?
+WHERE id_ticket = ?
+`;
+
+db.query(sql, [estado, id], (err) => {
+
+if (err) {
+console.error("Error actualizando estado:", err);
+return res.status(500).json({
+error: "Error actualizando estado"
+});
+}
+
+res.json({
+success: true
+});
+
+});
+
+});
+
+/* =========================
    INICIAR SERVIDOR
 ========================= */
 

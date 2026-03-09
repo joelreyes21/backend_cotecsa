@@ -489,27 +489,35 @@ db.query(sql, [
 });
 
 app.get("/api/tickets", async (req, res) => {
-  try {
 
-    const [tickets] = await pool.query(`
-      SELECT 
-        t.id_ticket,
-        u.nombre AS cliente,
-        t.asunto,
-        t.estado,
-        t.prioridad,
-        t.tecnico_id
-      FROM tickets t
-      JOIN usuarios u ON t.usuario_id = u.id_usuario
-      ORDER BY t.fecha_creacion DESC
-    `);
+try {
 
-    res.json(tickets);
+const [tickets] = await pool.query(`
+SELECT 
+t.id_ticket,
+u.nombre AS cliente,
+t.asunto,
+t.estado,
+t.prioridad,
+t.tecnico_id
+FROM tickets t
+LEFT JOIN usuarios u 
+ON t.usuario_id = u.id_usuario
+ORDER BY t.fecha_creacion DESC
+`);
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error obteniendo tickets" });
-  }
+res.json(tickets);
+
+} catch (error) {
+
+console.error("Error obteniendo tickets:", error);
+
+res.status(500).json({
+error: "Error obteniendo tickets"
+});
+
+}
+
 });
 
 /* =========================

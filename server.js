@@ -521,6 +521,65 @@ res.json(results);
 });
 
 /* =========================
+   ENVIAR CORREO DE SOPORTE
+========================= */
+
+app.post("/api/tickets/email", async (req, res) => {
+
+const { correo, asunto, mensaje } = req.body;
+
+if (!correo || !mensaje) {
+return res.status(400).json({
+error: "Faltan datos"
+});
+}
+
+try {
+
+await resend.emails.send({
+
+from: "COTECSA Soporte <noreply@cotecsa.shop>",
+
+to: correo,
+
+subject: asunto || "Respuesta a tu ticket de soporte",
+
+html: `
+<h2>Soporte Técnico COTECSA</h2>
+
+<p>${mensaje}</p>
+
+<br>
+
+<p>Un técnico está trabajando en tu solicitud.</p>
+
+<hr>
+
+<p style="color:gray;font-size:12px">
+Este es un mensaje automático del sistema de soporte COTECSA
+</p>
+`
+
+});
+
+res.json({
+success: true,
+mensaje: "Correo enviado"
+});
+
+} catch (error) {
+
+console.error("Error enviando correo:", error);
+
+res.status(500).json({
+error: "Error enviando correo"
+});
+
+}
+
+});
+
+/* =========================
    INICIAR SERVIDOR
 ========================= */
 

@@ -500,7 +500,7 @@ app.get("/api/tickets", async (req, res) => {
         t.prioridad,
         t.tecnico_id
       FROM tickets t
-      JOIN usuarios u ON t.usuario_id = u.id
+      JOIN usuarios u ON t.usuario_id = u.id_usuario
       ORDER BY t.fecha_creacion DESC
     `);
 

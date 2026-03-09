@@ -612,6 +612,38 @@ success: true
 });
 
 /* =========================
+   ASIGNAR TECNICO
+========================= */
+
+app.put("/api/tickets/:id/tecnico", (req, res) => {
+
+const id = req.params.id;
+const { tecnico } = req.body;
+
+const sql = `
+UPDATE tickets
+SET tecnico_id = ?
+WHERE id_ticket = ?
+`;
+
+db.query(sql, [tecnico, id], (err) => {
+
+if (err) {
+console.error("Error asignando técnico:", err);
+return res.status(500).json({
+error: "Error asignando técnico"
+});
+}
+
+res.json({
+success: true
+});
+
+});
+
+});
+
+/* =========================
    INICIAR SERVIDOR
 ========================= */
 

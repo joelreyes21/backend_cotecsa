@@ -449,38 +449,42 @@ app.delete("/api/planes/:id", (req, res) => {
   });
 });
 
-app.post("/api/tickets", async (req,res)=>{
+app.post("/api/tickets", (req, res) => {
 
-try{
-
-const { usuario_id, asunto, descripcion, prioridad, estado } = req.body;
+const {
+  usuario_id,
+  asunto,
+  descripcion,
+  prioridad = "media",
+  estado = "pendiente"
+} = req.body;
 
 const sql = `
 INSERT INTO tickets (usuario_id, asunto, descripcion, prioridad, estado)
 VALUES (?, ?, ?, ?, ?)
 `;
 
-const [result] = await pool.query(sql,[
-usuario_id,
-asunto,
-descripcion,
-prioridad,
-estado
-]);
+db.query(sql, [
+  usuario_id,
+  asunto,
+  descripcion,
+  prioridad,
+  estado
+], (err, result) => {
 
-res.json({
-success:true,
-ticket_id: result.insertId
+  if (err) {
+    console.error("Error creando ticket:", err);
+    return res.status(500).json({
+      error: "Error creando ticket"
+    });
+  }
+
+  res.json({
+    success: true,
+    ticket_id: result.insertId
+  });
+
 });
-
-}catch(error){
-
-console.error(error);
-res.status(500).json({
-error:"Error creando ticket"
-});
-
-}
 
 });
 

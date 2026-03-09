@@ -449,6 +449,49 @@ app.delete("/api/planes/:id", (req, res) => {
   });
 });
 
+app.post("/api/tickets", async (req, res) => {
+
+  const { usuario_id, asunto, descripcion, prioridad } = req.body;
+
+  if (!usuario_id || !descripcion) {
+    return res.status(400).json({
+      success: false,
+      message: "Faltan datos"
+    });
+  }
+
+  try {
+
+    const sql = `
+      INSERT INTO tickets (usuario_id, asunto, descripcion, prioridad)
+      VALUES (?, ?, ?, ?)
+    `;
+
+    const [result] = await pool.query(sql, [
+      usuario_id,
+      asunto,
+      descripcion,
+      prioridad
+    ]);
+
+    res.json({
+      success: true,
+      ticket_id: result.insertId
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Error creando ticket"
+    });
+
+  }
+
+});
+
 /* =========================
    INICIAR SERVIDOR
 ========================= */

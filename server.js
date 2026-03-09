@@ -494,6 +494,7 @@ const sql = `
 SELECT 
 t.id_ticket,
 u.nombre_completo AS cliente,
+u.correo,
 t.asunto,
 t.estado,
 t.prioridad,

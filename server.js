@@ -11,7 +11,7 @@ app.use(cors({
   origin: [
     "http://localhost:5500",
     "http://localhost:3000",
-    "https://cotecsa.shop"
+    "https://cotecsahn.com"
   ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true

@@ -496,6 +496,7 @@ t.id_ticket,
 u.nombre_completo AS cliente,
 u.correo,
 t.asunto,
+t.descripcion,
 t.estado,
 t.prioridad,
 t.tecnico_id
@@ -637,6 +638,37 @@ error: "Error asignando técnico"
 
 res.json({
 success: true
+});
+
+});
+
+});
+
+/* =========================
+   ELIMINAR TICKET
+========================= */
+
+app.delete("/api/tickets/:id", (req, res) => {
+
+const id = req.params.id;
+
+const sql = `
+DELETE FROM tickets
+WHERE id_ticket = ?
+`;
+
+db.query(sql, [id], (err) => {
+
+if (err) {
+console.error("Error eliminando ticket:", err);
+return res.status(500).json({
+error: "Error eliminando ticket"
+});
+}
+
+res.json({
+success: true,
+mensaje: "Ticket eliminado"
 });
 
 });

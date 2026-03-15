@@ -935,6 +935,54 @@ res.json(results[0]);
 });
 
 });
+
+app.put("/contratos/:id", (req, res) => {
+
+const id = req.params.id;
+
+const {
+usuario_id,
+plan_id,
+fecha_inicio,
+fecha_fin,
+estado
+} = req.body;
+
+const sql = `
+UPDATE contratos
+SET
+usuario_id = ?,
+plan_id = ?,
+fecha_inicio = ?,
+fecha_fin = ?,
+estado = ?
+WHERE id_contrato = ?
+`;
+
+db.query(sql, [
+usuario_id,
+plan_id,
+fecha_inicio,
+fecha_fin,
+estado,
+id
+], (err) => {
+
+if (err) {
+console.error("Error actualizando contrato:", err);
+return res.status(500).json({
+error: "Error actualizando contrato"
+});
+}
+
+res.json({
+success: true,
+mensaje: "Contrato actualizado"
+});
+
+});
+
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

@@ -771,6 +771,134 @@ id:result.insertId
 });
 
 /* =========================
+   GENERAR FACTURAS MENSUALES
+========================= */
+
+app.post("/api/facturas/generar", (req, res) => {
+
+const sql = `
+SELECT 
+c.id_contrato,
+p.precio
+FROM contratos c
+JOIN planes p 
+ON c.plan_id = p.id_plan
+WHERE c.estado = 'activo'
+`;
+
+db.query(sql, (err, contratos) => {
+
+if (err) {
+console.error("Error obteniendo contratos:", err);
+return res.status(500).json({ error: "Error contratos" });
+}
+
+contratos.forEach(c => {
+
+const numeroFactura = "FAC-" + Date.now() + "-" + c.id_contrato;
+
+const fechaEmision = new Date();
+const fechaVencimiento = new Date();
+fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
+
+const insertar = `
+INSERT INTO facturas
+(contrato_id, numero_factura, monto, fecha_emision, fecha_vencimiento, estado)
+VALUES (?, ?, ?, ?, ?, 'pendiente')
+`;
+
+db.query(insertar, [
+c.id_contrato,
+numeroFactura,
+c.precio,
+fechaEmision,
+fechaVencimiento
+]);
+
+});
+
+res.json({
+mensaje: "Facturas generadas correctamente"
+});
+
+});
+
+});
+
+/* =========================
+   OBTENER FACTURAS
+========================= */
+
+app.get("/api/facturas", (req, res) => {
+
+const sql = `
+SELECT 
+f.id_factura,
+f.numero_factura,
+f.monto,
+f.fecha_emision,
+f.fecha_vencimiento,
+f.estado,
+u.nombre_completo AS cliente,
+p.nombre AS plan
+FROM facturas f
+JOIN contratos c
+ON f.contrato_id = c.id_contrato
+JOIN usuarios u
+ON c.usuario_id = u.id_usuario
+JOIN planes p
+ON c.plan_id = p.id_plan
+ORDER BY f.fecha_emision DESC
+`;
+
+db.query(sql, (err, results) => {
+
+if (err) {
+console.error(err);
+return res.status(500).json({
+error: "Error obteniendo facturas"
+});
+}
+
+res.json(results);
+
+});
+
+});
+
+/* =========================
+   PAGAR FACTURA
+========================= */
+
+app.put("/api/facturas/:id/pagar", (req, res) => {
+
+const id = req.params.id;
+
+const sql = `
+UPDATE facturas
+SET estado = 'pagado'
+WHERE id_factura = ?
+`;
+
+db.query(sql, [id], err => {
+
+if (err) {
+console.error(err);
+return res.status(500).json({
+error: "Error pagando factura"
+});
+}
+
+res.json({
+success: true,
+mensaje: "Factura pagada"
+});
+
+});
+
+});
+
+/* =========================
    INICIAR SERVIDOR
 ========================= */
 

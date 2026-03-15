@@ -676,6 +676,101 @@ mensaje: "Ticket eliminado"
 });
 
 /* =========================
+   CONTRATOS
+========================= */
+
+/* Obtener todos los contratos */
+
+app.get("/contratos", (req, res) => {
+
+const sql = `
+SELECT
+c.id_contrato AS id,
+u.nombre_completo AS cliente,
+p.nombre AS plan,
+c.fecha_inicio,
+c.fecha_fin,
+c.estado
+FROM contratos c
+LEFT JOIN usuarios u
+ON c.usuario_id = u.id_usuario
+LEFT JOIN planes p
+ON c.plan_id = p.id_plan
+ORDER BY c.id_contrato DESC
+`;
+
+db.query(sql, (err, results) => {
+
+if (err) {
+console.error("Error obteniendo contratos:", err);
+return res.status(500).json({
+error: "Error obteniendo contratos"
+});
+}
+
+res.json(results);
+
+});
+
+});
+
+
+/* Crear contrato */
+
+app.post("/contratos", (req, res) => {
+
+const {
+usuario_id,
+plan_id,
+fecha_inicio,
+fecha_fin,
+estado
+} = req.body;
+
+if(!usuario_id || !plan_id || !fecha_inicio){
+
+return res.status(400).json({
+error:"Datos incompletos"
+});
+
+}
+
+const sql = `
+INSERT INTO contratos
+(usuario_id, plan_id, fecha_inicio, fecha_fin, estado)
+VALUES (?, ?, ?, ?, ?)
+`;
+
+db.query(sql, [
+
+usuario_id,
+plan_id,
+fecha_inicio,
+fecha_fin,
+estado || "activo"
+
+], (err, result) => {
+
+if (err) {
+
+console.error("Error creando contrato:", err);
+
+return res.status(500).json({
+error:"Error creando contrato"
+});
+
+}
+
+res.json({
+success:true,
+id:result.insertId
+});
+
+});
+
+});
+
+/* =========================
    INICIAR SERVIDOR
 ========================= */
 

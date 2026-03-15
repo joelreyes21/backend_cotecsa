@@ -898,6 +898,43 @@ mensaje: "Factura pagada"
 
 });
 
+
+app.get("/contratos/:id", (req, res) => {
+
+const id = req.params.id;
+
+const sql = `
+SELECT 
+c.id_contrato AS id,
+c.usuario_id,
+c.plan_id,
+c.fecha_inicio,
+c.fecha_fin,
+c.estado
+FROM contratos c
+WHERE c.id_contrato = ?
+`;
+
+db.query(sql, [id], (err, results) => {
+
+if (err) {
+console.error("Error obteniendo contrato:", err);
+return res.status(500).json({
+error: "Error obteniendo contrato"
+});
+}
+
+if (results.length === 0) {
+return res.status(404).json({
+error: "Contrato no encontrado"
+});
+}
+
+res.json(results[0]);
+
+});
+
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

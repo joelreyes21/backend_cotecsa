@@ -10,11 +10,7 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const app = express();
 
 app.use(cors({
-  origin: [
-    "http://localhost:5500",
-    "http://localhost:3000",
-    "https://cotecsahn.com"
-  ],
+  origin: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));

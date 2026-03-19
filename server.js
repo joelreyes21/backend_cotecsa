@@ -4,6 +4,8 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const { Resend } = require("resend");
 const db = require("./db");
+const Stripe = require("stripe");
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
@@ -981,6 +983,97 @@ mensaje: "Contrato actualizado"
 });
 
 });
+
+});
+
+/* =========================
+   CONTRATOS POR CLIENTE
+========================= */
+
+app.get("/api/contratos/cliente/:correo", (req, res) => {
+
+const correo = req.params.correo;
+
+const sql = `
+SELECT 
+c.id_contrato AS id,
+p.nombre AS plan_nombre,
+p.velocidad,
+p.precio
+FROM contratos c
+JOIN usuarios u ON c.usuario_id = u.id_usuario
+JOIN planes p ON c.plan_id = p.id_plan
+WHERE u.correo = ?
+AND c.estado = 'activo'
+`;
+
+db.query(sql, [correo], (err, results) => {
+
+if (err) {
+console.error("Error obteniendo contratos cliente:", err);
+return res.status(500).json({
+error: "Error obteniendo contratos"
+});
+}
+
+res.json(results);
+
+});
+
+});
+
+/* =========================
+   STRIPE CHECKOUT
+========================= */
+
+app.post("/api/stripe/crear-sesion", async (req, res) => {
+
+try {
+
+const { contrato_id, nombre, precio } = req.body;
+
+// 🔥 convertir a centavos USD aprox
+const usd = Math.round((precio / 24.5) * 100);
+
+const session = await stripe.checkout.sessions.create({
+
+payment_method_types: ["card"],
+
+line_items: [
+{
+price_data: {
+currency: "usd",
+product_data: {
+name: nombre
+},
+unit_amount: usd
+},
+quantity: 1
+}
+],
+
+mode: "payment",
+
+success_url: "https://cotecsahn.com/exito.html",
+cancel_url: "https://cotecsahn.com/cancelado.html",
+
+metadata: {
+contrato_id
+}
+
+});
+
+res.json({ id: session.id });
+
+} catch (error) {
+
+console.error("Error Stripe:", error);
+
+res.status(500).json({
+error: "Error creando sesión"
+});
+
+}
 
 });
 /* =========================

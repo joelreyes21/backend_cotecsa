@@ -1576,6 +1576,56 @@ app.get("/api/notificaciones", (req, res) => {
   });
 
 });
+
+app.delete("/api/notificaciones/:id", (req, res) => {
+
+  const id = req.params.id;
+
+  db.query(
+    "DELETE FROM notificaciones WHERE id_notificacion = ?",
+    [id],
+    (err) => {
+
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Error eliminando" });
+      }
+
+      res.json({ success: true });
+    }
+  );
+
+});
+app.post("/api/notificaciones/email", async (req, res) => {
+
+  const { correo, mensaje } = req.body;
+
+  if (!correo || !mensaje) {
+    return res.status(400).json({ error: "Faltan datos" });
+  }
+
+  try {
+
+    await resend.emails.send({
+      from: "COTECSA <noreply@cotecsa.shop>",
+      to: correo,
+      subject: "Respuesta COTECSA",
+      html: `
+        <h2>Soporte COTECSA</h2>
+        <p>${mensaje}</p>
+        <br>
+        <small>Este es un mensaje automático</small>
+      `
+    });
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error enviando correo" });
+  }
+
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

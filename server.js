@@ -1194,8 +1194,8 @@ app.get("/api/pagos", (req, res) => {
 
 });
 
-
 const PDFDocument = require("pdfkit");
+const path = require("path");
 
 app.get("/api/factura/:id", (req, res) => {
 
@@ -1232,68 +1232,108 @@ app.get("/api/factura/:id", (req, res) => {
 
     doc.pipe(res);
 
-    // ================= HEADER =================
-    doc.rect(0, 0, 612, 90).fill("#0a1f44");
+    const logoPath = path.join(__dirname, "logo.png");
 
+    // ================= HEADER =================
+    doc.rect(0, 0, 612, 100).fill("#0a1f44");
+
+    // LOGO
+    doc.image(logoPath, 50, 25, { width: 80 });
+
+    // EMPRESA
     doc.fillColor("#ffffff")
       .fontSize(20)
-      .text("COTECSA", 50, 30);
+      .text("COTECSA", 150, 35);
 
     doc.fontSize(10)
-      .text("Internet & Cable", 50, 55);
+      .text("Internet & Cable", 150, 60);
 
     doc.fillColor("#000");
 
-    // ================= FACTURA TITLE =================
-    doc.moveDown(2);
-    doc.fontSize(18).text("FACTURA", { align: "right" });
+    // ================= FACTURA INFO =================
+    doc.moveDown(3);
 
-    doc.fontSize(10).text(`No: FAC-2026-${id}`, { align: "right" });
+    doc.fontSize(18)
+      .text("FACTURA", { align: "right" });
+
+    doc.fontSize(10)
+      .text(`Factura No: FAC-2026-${id}`, { align: "right" });
 
     doc.moveDown();
 
-    // ================= INFO CLIENTE =================
-    doc.fontSize(12).text("Datos del Cliente", { underline: true });
+    // ================= CLIENT BOX =================
+    const boxTop = doc.y;
 
-    doc.moveDown(0.5);
+    doc.roundedRect(50, boxTop, 500, 80, 5)
+      .stroke("#cccccc");
 
-    doc.text(`Nombre: ${data.cliente}`);
-    doc.text(`Contrato: ${data.numero_contrato}`);
-    doc.text(`Fecha: ${new Date(data.fecha_pago).toLocaleDateString()}`);
+    doc.fontSize(12)
+      .text("Datos del Cliente", 60, boxTop + 10, { underline: true });
 
-    doc.moveDown(2);
+    doc.fontSize(10)
+      .text(`Nombre: ${data.cliente}`, 60, boxTop + 30);
 
-    // ================= TABLA =================
+    doc.text(`Contrato: ${data.numero_contrato}`, 60, boxTop + 45);
 
-    const tableTop = doc.y;
-
-    doc.fontSize(12).text("Descripción", 50, tableTop);
-    doc.text("Cantidad", 300, tableTop);
-    doc.text("Precio", 380, tableTop);
-    doc.text("Total", 460, tableTop);
-
-    doc.moveTo(50, tableTop + 15)
-      .lineTo(550, tableTop + 15)
-      .stroke();
-
-    const rowY = tableTop + 25;
-
-    doc.text("Servicio mensual COTECSA", 50, rowY);
-    doc.text("1", 300, rowY);
-    doc.text(`L. ${data.monto}`, 380, rowY);
-    doc.text(`L. ${data.monto}`, 460, rowY);
+    doc.text(
+      `Fecha: ${new Date(data.fecha_pago).toLocaleDateString()}`,
+      60,
+      boxTop + 60
+    );
 
     doc.moveDown(4);
 
-    // ================= TOTAL =================
-    doc.fontSize(14)
-      .text(`TOTAL: L. ${data.monto}`, 400, doc.y, {
-        align: "right"
-      });
+    // ================= TABLA =================
+    const tableTop = doc.y;
+
+    // HEADER
+    doc.rect(50, tableTop, 500, 25)
+      .fill("#0a1f44");
+
+    doc.fillColor("#fff")
+      .fontSize(10)
+      .text("Descripción", 60, tableTop + 7)
+      .text("Cant.", 300, tableTop + 7)
+      .text("Precio", 370, tableTop + 7)
+      .text("Total", 460, tableTop + 7);
+
+    doc.fillColor("#000");
+
+    // FILA
+    const rowY = tableTop + 30;
+
+    doc.rect(50, rowY, 500, 25)
+      .stroke("#ddd");
+
+    doc.text("Servicio mensual COTECSA", 60, rowY + 7);
+    doc.text("1", 300, rowY + 7);
+    doc.text(`L. ${data.monto}`, 370, rowY + 7);
+    doc.text(`L. ${data.monto}`, 460, rowY + 7);
+
+    // ================= TOTALES =================
+    const subtotal = parseFloat(data.monto);
+    const isv = subtotal * 0.15;
+    const total = subtotal + isv;
 
     doc.moveDown(3);
 
+    doc.fontSize(10)
+      .text(`Subtotal: L. ${subtotal.toFixed(2)}`, 350);
+
+    doc.text(`ISV (15%): L. ${isv.toFixed(2)}`, 350);
+
+    doc.fontSize(12)
+      .text(`TOTAL: L. ${total.toFixed(2)}`, 350, doc.y + 5);
+
     // ================= FOOTER =================
+    doc.moveDown(4);
+
+    doc.moveTo(50, doc.y)
+      .lineTo(550, doc.y)
+      .stroke("#ccc");
+
+    doc.moveDown();
+
     doc.fontSize(10)
       .fillColor("#555")
       .text("Gracias por confiar en COTECSA", {
@@ -1301,8 +1341,12 @@ app.get("/api/factura/:id", (req, res) => {
       });
 
     doc.text("Soporte: soporte@cotecsa.com", {
-      align: "center"
-    });
+        align: "center"
+      });
+
+    doc.text("Tel: +504 9999-9999", {
+        align: "center"
+      });
 
     doc.end();
 

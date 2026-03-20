@@ -1421,6 +1421,34 @@ app.get("/api/solicitudes", (req, res) => {
 
 });
 
+app.get("/api/solicitudes", (req, res) => {
+
+  const sql = `
+    SELECT 
+      s.id,
+      s.nombre,
+      s.telefono,
+      s.correo,
+      s.fecha,
+      p.nombre AS plan_nombre,
+      p.precio
+    FROM solicitudes s
+    JOIN planes p ON s.plan_id = p.id_plan
+    ORDER BY s.id DESC
+  `;
+
+  db.query(sql, (err, results) => {
+
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Error obteniendo solicitudes" });
+    }
+
+    res.json(results);
+
+  });
+
+});
 
 /* =========================
    INICIAR SERVIDOR

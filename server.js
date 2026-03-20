@@ -1396,3 +1396,36 @@ app.post("/api/solicitudes", (req, res) => {
   });
 
 });
+
+app.get("/api/solicitudes", (req, res) => {
+
+  const sql = `
+    SELECT s.*, p.nombre AS plan_nombre, p.precio
+    FROM solicitudes s
+    JOIN planes p ON s.plan_id = p.id_plan
+    ORDER BY s.id DESC
+  `;
+
+  db.query(sql, (err, results) => {
+
+    if (err) {
+      console.error("ERROR OBTENIENDO SOLICITUDES:", err);
+      return res.status(500).json({
+        error: "Error obteniendo solicitudes"
+      });
+    }
+
+    res.json(results);
+
+  });
+
+});
+
+
+/* =========================
+   INICIAR SERVIDOR
+========================= */
+
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor desplegado en Railway (puerto ${PORT})`);
+});

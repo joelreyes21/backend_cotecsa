@@ -1193,6 +1193,77 @@ app.get("/api/pagos", (req, res) => {
   });
 
 });
+const PDFDocument = require("pdfkit");
+
+app.get("/api/factura/:id", (req, res) => {
+
+  const id = req.params.id;
+
+  const sql = `
+    SELECT 
+      p.id_pago,
+      p.monto,
+      p.fecha_pago,
+      u.nombre_completo AS cliente,
+      c.numero_contrato
+    FROM pagos p
+    JOIN contratos c ON p.contrato_id = c.id_contrato
+    JOIN usuarios u ON c.usuario_id = u.id_usuario
+    WHERE p.id_pago = ?
+  `;
+
+  db.query(sql, [id], (err, results) => {
+
+    if (err || results.length === 0) {
+      return res.status(500).send("Error generando factura");
+    }
+
+    const data = results[0];
+
+    const doc = new PDFDocument();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=factura_${id}.pdf`
+    );
+
+    doc.pipe(res);
+
+    // 🔥 LOGO (si tenés uno)
+    // doc.image("logo.png", 50, 45, { width: 100 });
+
+    doc.fontSize(20).text("COTECSA", 50, 50);
+    doc.fontSize(12).text("Internet & Cable", 50, 70);
+
+    doc.moveDown();
+
+    doc.fontSize(16).text("FACTURA", { align: "center" });
+
+    doc.moveDown();
+
+    doc.fontSize(12).text(`Cliente: ${data.cliente}`);
+    doc.text(`Contrato: ${data.numero_contrato}`);
+    doc.text(`Fecha: ${new Date(data.fecha_pago).toLocaleDateString()}`);
+
+    doc.moveDown();
+
+    doc.text("Detalle:", { underline: true });
+
+    doc.moveDown();
+
+    doc.text(`Servicio mensual COTECSA`);
+    doc.text(`Monto: L. ${data.monto}`);
+
+    doc.moveDown(2);
+
+    doc.text("Gracias por su pago", { align: "center" });
+
+    doc.end();
+
+  });
+
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

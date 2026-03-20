@@ -1562,6 +1562,40 @@ app.get("/api/notificaciones", (req, res) => {
   });
 
 });
+
+app.post("/api/contacto", (req, res) => {
+  const { nombre, telefono, correo, mensaje } = req.body;
+
+  if (!nombre || !telefono || !correo || !mensaje) {
+    return res.status(400).json({ error: "Campos incompletos" });
+  }
+
+  const mensajeCompleto = `
+Nuevo mensaje de contacto:
+
+Nombre: ${nombre}
+Teléfono: ${telefono}
+Correo: ${correo}
+
+Mensaje:
+${mensaje}
+  `;
+
+  const sql = `
+    INSERT INTO notificaciones (usuario_id, mensaje, leida)
+    VALUES (?, ?, 0)
+  `;
+
+  // usuario_id = 1 (admin por ejemplo)
+  db.query(sql, [1, mensajeCompleto], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Error al guardar" });
+    }
+
+    res.json({ success: true });
+  });
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

@@ -1627,15 +1627,7 @@ app.post("/api/notificaciones/email", async (req, res) => {
 
 });
 
-app.get("/api/usuarios", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT * FROM usuarios");
-    res.json(rows);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error obteniendo usuarios" });
-  }
-});
+
 /* =========================
    INICIAR SERVIDOR
 ========================= */

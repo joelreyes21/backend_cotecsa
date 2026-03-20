@@ -1627,87 +1627,49 @@ app.post("/api/notificaciones/email", async (req, res) => {
 
 });
 
+
 // =========================
-// 👥 USUARIOS
+// 📊 INGRESOS MENSUALES
 // =========================
-app.get("/api/usuarios", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT * FROM usuarios");
-    res.json(rows);
-  } catch (error) {
-    console.error("Error usuarios:", error);
-    res.status(500).json({ error: "Error obteniendo usuarios" });
-  }
+app.get("/api/ingresos-mensuales", (req, res) => {
+    const sql = `
+        SELECT MONTH(fecha_pago) AS mes, SUM(monto) AS monto
+        FROM pagos
+        GROUP BY MONTH(fecha_pago)
+        ORDER BY mes ASC
+    `;
+ 
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error("Error ingresos mensuales:", err);
+            return res.status(500).json({ error: "Error obteniendo ingresos" });
+        }
+        res.json(results);
+    });
 });
-
+ 
 // =========================
-// 📡 PLANES
+// 🥧 USUARIOS POR ROLES
 // =========================
-app.get("/api/planes", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT * FROM planes");
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: "Error planes" });
-  }
-});
-
-// =========================
-// 💰 PAGOS
-// =========================
-app.get("/api/pagos", async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT pagos.*, usuarios.nombre 
-      FROM pagos
-      LEFT JOIN usuarios ON pagos.usuario_id = usuarios.id
-      ORDER BY fecha DESC
-    `);
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: "Error pagos" });
-  }
-});
-
-// =========================
-// 🎫 TICKETS
-// =========================
-app.get("/api/tickets", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT * FROM tickets");
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: "Error tickets" });
-  }
-});
-
-app.get("/api/ingresos-mensuales", async (req, res) => {
-    try {
-        const [rows] = await db.query(`
-            SELECT MONTH(fecha) AS mes, SUM(monto) AS monto
-            FROM pagos
-            GROUP BY mes
-        `);
-        res.json(rows);
-    } catch (err) {
-        console.error("Error al obtener ingresos mensuales:", err);
-        res.status(500).json({ error: "Error obteniendo ingresos" });
-    }
-});
-
-app.get("/api/usuarios-roles", async (req, res) => {
-    try {
-        const [clientes] = await db.query("SELECT COUNT(*) FROM usuarios WHERE rol = 'cliente'");
-        const [administradores] = await db.query("SELECT COUNT(*) FROM usuarios WHERE rol = 'administrador'");
-
+app.get("/api/usuarios-roles", (req, res) => {
+    const sql = `
+        SELECT
+            SUM(CASE WHEN rol = 'cliente' THEN 1 ELSE 0 END) AS clientes,
+            SUM(CASE WHEN rol = 'admin' THEN 1 ELSE 0 END) AS administradores
+        FROM usuarios
+    `;
+ 
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error("Error usuarios-roles:", err);
+            return res.status(500).json({ error: "Error obteniendo roles" });
+        }
+ 
         res.json({
-            clientes: clientes[0]['COUNT(*)'],
-            administradores: administradores[0]['COUNT(*)']
+            clientes: results[0].clientes || 0,
+            administradores: results[0].administradores || 0
         });
-    } catch (err) {
-        console.error("Error al obtener usuarios por roles:", err);
-        res.status(500).json({ error: "Error obteniendo roles" });
-    }
+    });
 });
 
 /* =========================

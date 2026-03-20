@@ -1160,21 +1160,22 @@ app.put("/api/usuarios/perfil", async (req, res) => {
 
 app.get("/api/pagos", async (req, res) => {
   try {
+
     const [rows] = await db.query(`
       SELECT 
-        p.id_pago,
-        p.monto,
-        p.fecha_pago,
-        p.estado,
-        p.contrato_id
-      FROM pagos p
-      ORDER BY p.fecha_pago DESC
+        id_pago,
+        contrato_id,
+        monto,
+        fecha_pago,
+        estado
+      FROM pagos
+      ORDER BY fecha_pago DESC
     `);
 
     res.json(rows);
 
   } catch (error) {
-    console.error("ERROR PAGOS:", error); // 🔥 IMPORTANTE
+    console.error("ERROR EN PAGOS:", error); // 🔥 IMPORTANTE
     res.status(500).json({ error: "Error obteniendo pagos" });
   }
 });

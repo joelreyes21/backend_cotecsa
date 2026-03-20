@@ -1133,51 +1133,65 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
 
 });
 
-app.put("/api/usuarios/perfil", async (req, res) => {
-  try {
-    const { nombre, correo, correoActual } = req.body;
+app.put("/api/usuarios/perfil", (req, res) => {
 
-    if (!nombre || !correo || !correoActual) {
-      return res.status(400).json({ error: "Datos incompletos" });
+  const { nombre, correo } = req.body;
+
+  if (!nombre || !correo) {
+    return res.status(400).json({ error: "Datos incompletos" });
+  }
+
+  const sql = `
+    UPDATE usuarios 
+    SET nombre_completo = ?, correo = ?
+    WHERE correo = ?
+  `;
+
+  // 🔥 USAMOS EL MISMO CORREO PARA BUSCAR
+  db.query(sql, [nombre, correo, correo], (err, result) => {
+
+    if (err) {
+      console.error("ERROR SQL:", err);
+      return res.status(500).json({ error: "Error en base de datos" });
     }
 
-    // 🔥 MAPEAMOS nombre → nombre_completo
-    const sql = `
-      UPDATE usuarios 
-      SET nombre_completo = ?, correo = ?
-      WHERE correo = ?
-    `;
-
-    await db.query(sql, [nombre, correo, correoActual]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
 
     res.json({ ok: true });
 
-  } catch (error) {
-    console.error("ERROR:", error);
-    res.status(500).json({ error: "Error al actualizar perfil" });
-  }
+  });
+
 });
 
-app.get("/api/pagos", async (req, res) => {
-  try {
+app.get("/api/pagos", (req, res) => {
 
-    const [rows] = await db.query(`
-      SELECT 
-        id_pago,
-        contrato_id,
-        monto,
-        fecha_pago,
-        estado
-      FROM pagos
-      ORDER BY fecha_pago DESC
-    `);
+  const sql = `
+    SELECT 
+      p.id_pago,
+      p.contrato_id,
+      p.monto,
+      p.fecha_pago,
+      p.estado,
+      u.nombre_completo AS cliente
+    FROM pagos p
+    JOIN contratos c ON p.contrato_id = c.id_contrato
+    JOIN usuarios u ON c.usuario_id = u.id_usuario
+    ORDER BY p.fecha_pago DESC
+  `;
 
-    res.json(rows);
+  db.query(sql, (err, results) => {
 
-  } catch (error) {
-    console.error("ERROR EN PAGOS:", error); // 🔥 IMPORTANTE
-    res.status(500).json({ error: "Error obteniendo pagos" });
-  }
+    if (err) {
+      console.error("ERROR EN PAGOS:", err);
+      return res.status(500).json({ error: "Error obteniendo pagos" });
+    }
+
+    res.json(results);
+
+  });
+
 });
 /* =========================
    INICIAR SERVIDOR

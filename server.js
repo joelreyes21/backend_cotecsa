@@ -1450,6 +1450,57 @@ app.get("/api/solicitudes", (req, res) => {
 
 });
 
+app.post("/api/solicitudes/email", async (req, res) => {
+
+  const { correo, mensaje } = req.body;
+
+  if (!correo || !mensaje) {
+    return res.status(400).json({
+      error: "Faltan datos"
+    });
+  }
+
+  try {
+
+    await resend.emails.send({
+
+      from: "COTECSA <noreply@cotecsa.shop>",
+
+      to: correo,
+
+      subject: "Respuesta a tu solicitud",
+
+      html: `
+        <h2>COTECSA</h2>
+
+        <p>${mensaje}</p>
+
+        <br>
+
+        <p>Gracias por tu interés en nuestros servicios, pronto nos comunicaremos contigo.</p>
+
+        <hr>
+
+        <small>Este es un correo automático</small>
+      `
+    });
+
+    res.json({
+      success: true
+    });
+
+  } catch (error) {
+
+    console.error("ERROR CORREO:", error);
+
+    res.status(500).json({
+      error: "Error enviando correo"
+    });
+
+  }
+
+});
+
 /* =========================
    INICIAR SERVIDOR
 ========================= */

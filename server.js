@@ -1627,7 +1627,59 @@ app.post("/api/notificaciones/email", async (req, res) => {
 
 });
 
+// =========================
+// 👥 USUARIOS
+// =========================
+app.get("/api/usuarios", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM usuarios");
+    res.json(rows);
+  } catch (error) {
+    console.error("Error usuarios:", error);
+    res.status(500).json({ error: "Error obteniendo usuarios" });
+  }
+});
 
+// =========================
+// 📡 PLANES
+// =========================
+app.get("/api/planes", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM planes");
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: "Error planes" });
+  }
+});
+
+// =========================
+// 💰 PAGOS
+// =========================
+app.get("/api/pagos", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT pagos.*, usuarios.nombre 
+      FROM pagos
+      LEFT JOIN usuarios ON pagos.usuario_id = usuarios.id
+      ORDER BY fecha DESC
+    `);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: "Error pagos" });
+  }
+});
+
+// =========================
+// 🎫 TICKETS
+// =========================
+app.get("/api/tickets", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM tickets");
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: "Error tickets" });
+  }
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

@@ -1539,29 +1539,6 @@ app.delete("/api/solicitudes/:id", (req, res) => {
 
 });
 
-app.get("/api/notificaciones", (req, res) => {
-
-  const sqlSolicitudes = "SELECT COUNT(*) AS total FROM solicitudes";
-  const sqlTickets = "SELECT COUNT(*) AS total FROM tickets WHERE estado = 'pendiente'";
-
-  db.query(sqlSolicitudes, (err, sol) => {
-
-    if (err) return res.status(500).json({ error: "Error solicitudes" });
-
-    db.query(sqlTickets, (err, tic) => {
-
-      if (err) return res.status(500).json({ error: "Error tickets" });
-
-      res.json({
-        solicitudes: sol[0].total,
-        tickets: tic[0].total
-      });
-
-    });
-
-  });
-
-});
 
 app.post("/api/contacto", (req, res) => {
   const { nombre, telefono, correo, mensaje } = req.body;
@@ -1583,6 +1560,21 @@ app.post("/api/contacto", (req, res) => {
 
     res.status(200).json({ message: "Guardado correctamente" });
   });
+});
+
+app.get("/api/notificaciones", (req, res) => {
+
+  const sql = `
+    SELECT id_notificacion, nombre, telefono, correo, mensaje, fecha, leida
+    FROM notificaciones
+    ORDER BY fecha DESC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: "Error" });
+    res.json(results);
+  });
+
 });
 /* =========================
    INICIAR SERVIDOR

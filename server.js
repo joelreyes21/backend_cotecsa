@@ -1157,6 +1157,30 @@ app.put("/api/usuarios/perfil", async (req, res) => {
     res.status(500).json({ error: "Error al actualizar perfil" });
   }
 });
+
+app.get("/api/pagos", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        p.id_pago,
+        p.monto,
+        p.fecha_pago,
+        p.estado,
+        c.id AS contrato_id,
+        u.nombre AS cliente
+      FROM pagos p
+      INNER JOIN contratos c ON p.contrato_id = c.id
+      INNER JOIN usuarios u ON c.cliente_id = u.id
+      ORDER BY p.fecha_pago DESC
+    `);
+
+    res.json(rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error obteniendo pagos" });
+  }
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

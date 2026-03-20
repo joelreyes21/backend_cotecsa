@@ -15,6 +15,7 @@ app.use(cors({
   credentials: true
 }));
 
+app.use("/webhook/stripe", express.raw({ type: "application/json" }));
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
@@ -1072,6 +1073,66 @@ error: "Error creando sesión"
 });
 
 }
+
+});
+
+app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (req, res) => {
+
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error("❌ Error webhook:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // 🔥 CUANDO EL PAGO SE COMPLETA
+  if (event.type === "checkout.session.completed") {
+
+    const session = event.data.object;
+
+    const contrato_id = session.metadata.contrato_id;
+    const monto = session.amount_total / 100; // USD
+
+    console.log("💳 PAGO COMPLETADO:", contrato_id, monto);
+
+    // 🔥 GUARDAR EN TABLA PAGOS
+    const sql = `
+      INSERT INTO pagos (contrato_id, monto, fecha_pago, metodo_pago, estado)
+      VALUES (?, ?, NOW(), 'stripe', 'completado')
+    `;
+
+    db.query(sql, [contrato_id, monto], (err) => {
+      if (err) {
+        console.error("Error guardando pago:", err);
+      }
+    });
+
+    // 🔥 MARCAR FACTURA PAGADA
+    const updateFactura = `
+      UPDATE facturas
+      SET estado = 'pagado'
+      WHERE contrato_id = ?
+      AND estado = 'pendiente'
+      LIMIT 1
+    `;
+
+    db.query(updateFactura, [contrato_id], (err) => {
+      if (err) {
+        console.error("Error actualizando factura:", err);
+      }
+    });
+
+  }
+
+  res.json({ received: true });
 
 });
 /* =========================

@@ -1359,41 +1359,88 @@ app.get("/api/factura/:id", (req, res) => {
 
 });
 
-app.post("/api/solicitudes", (req, res) => {
+app.post("/api/solicitudes", async (req, res) => {
 
   const { nombre, telefono, correo, plan_id } = req.body;
 
   if (!nombre || !telefono || !correo || !plan_id) {
-    return res.status(400).json({
-      error: "Datos incompletos"
-    });
+    return res.status(400).json({ error: "Faltan datos" });
   }
 
-  const sql = `
-    INSERT INTO solicitudes (nombre, telefono, correo, plan_id)
-    VALUES (?, ?, ?, ?)
-  `;
+  try {
 
-  db.query(sql, [
-    nombre,
-    telefono,
-    correo,
-    Number(plan_id) // 🔥 IMPORTANTE
-  ], (err, result) => {
+    // 🔥 1. GUARDAR EN DB
+    const [result] = await db.query(`
+      INSERT INTO solicitudes (nombre, telefono, correo, plan_id)
+      VALUES (?, ?, ?, ?)
+    `, [nombre, telefono, correo, plan_id]);
 
-    if (err) {
-      console.error("ERROR INSERTANDO SOLICITUD:", err);
-      return res.status(500).json({
-        error: "Error al guardar solicitud"
-      });
-    }
+
+
+    // 🔥 2. OBTENER INFO DEL PLAN
+    const [planRows] = await db.query(`
+      SELECT nombre, precio FROM planes WHERE id = ?
+    `, [plan_id]);
+
+    const plan = planRows[0];
+
+
+
+    // 🔥 3. ENVIAR CORREO AUTOMÁTICO
+    await resend.emails.send({
+
+      from: "COTECSA <noreply@cotecsa.shop>",
+
+      to: correo,
+
+      subject: "Hemos recibido tu solicitud 📡",
+
+      html: `
+        <div style="font-family:Segoe UI; padding:20px;">
+
+          <h2 style="color:#0a1f44;">COTECSA</h2>
+
+          <p>Hola <b>${nombre}</b>,</p>
+
+          <p>
+            Gracias por comunicarte con nosotros 🙌<br>
+            Hemos recibido tu solicitud del plan:
+          </p>
+
+          <p style="font-size:18px; font-weight:bold;">
+            ${plan.nombre} - L ${plan.precio}
+          </p>
+
+          <p>
+            Nuestro equipo se pondrá en contacto contigo muy pronto 📞
+          </p>
+
+          <hr>
+
+          <small style="color:#888;">
+            Este es un mensaje automático, no es necesario responder.
+          </small>
+
+        </div>
+      `
+    });
+
+
 
     res.json({
       success: true,
       id: result.insertId
     });
 
-  });
+  } catch (error) {
+
+    console.error("ERROR SOLICITUD:", error);
+
+    res.status(500).json({
+      error: "Error al guardar solicitud"
+    });
+
+  }
 
 });
 

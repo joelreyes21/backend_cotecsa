@@ -1133,6 +1133,26 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
 
 });
 
+app.put("/api/usuarios/perfil", async (req, res) => {
+  try {
+    const { nombre, correo, correoActual } = req.body;
+
+    if (!nombre || !correo || !correoActual) {
+      return res.status(400).json({ error: "Datos incompletos" });
+    }
+
+    await db.query(
+      "UPDATE usuarios SET nombre = ?, correo = ? WHERE correo = ?",
+      [nombre, correo, correoActual]
+    );
+
+    res.json({ ok: true });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al actualizar perfil" });
+  }
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

@@ -1029,7 +1029,9 @@ try {
 const { contrato_id, nombre, precio } = req.body;
 
 // 🔥 convertir a centavos USD aprox
-const usd = Math.round((precio / 24.5) * 100);
+console.log("PRECIO QUE LLEGA:", precio);
+
+const usd = Math.round((Number(precio) / 24.5) * 100);
 
 const session = await stripe.checkout.sessions.create({
 

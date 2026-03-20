@@ -1141,15 +1141,19 @@ app.put("/api/usuarios/perfil", async (req, res) => {
       return res.status(400).json({ error: "Datos incompletos" });
     }
 
-    await db.query(
-      "UPDATE usuarios SET nombre = ?, correo = ? WHERE correo = ?",
-      [nombre, correo, correoActual]
-    );
+    // 🔥 MAPEAMOS nombre → nombre_completo
+    const sql = `
+      UPDATE usuarios 
+      SET nombre_completo = ?, correo = ?
+      WHERE correo = ?
+    `;
+
+    await db.query(sql, [nombre, correo, correoActual]);
 
     res.json({ ok: true });
 
   } catch (error) {
-    console.error(error);
+    console.error("ERROR:", error);
     res.status(500).json({ error: "Error al actualizar perfil" });
   }
 });

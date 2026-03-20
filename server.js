@@ -1359,6 +1359,25 @@ app.get("/api/factura/:id", (req, res) => {
 
 });
 
+app.post("/api/solicitudes", async (req, res) => {
+  try {
+    const { nombre, telefono, correo, plan_id } = req.body;
+
+    const sql = `
+      INSERT INTO solicitudes (nombre, telefono, correo, plan_id)
+      VALUES (?, ?, ?, ?)
+    `;
+
+    await db.query(sql, [nombre, telefono, correo, plan_id]);
+
+    res.json({ mensaje: "Solicitud guardada correctamente" });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al guardar solicitud" });
+  }
+});
+
 
 /* =========================
    INICIAR SERVIDOR

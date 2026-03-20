@@ -1359,30 +1359,40 @@ app.get("/api/factura/:id", (req, res) => {
 
 });
 
-app.post("/api/solicitudes", async (req, res) => {
-  try {
-    const { nombre, telefono, correo, plan_id } = req.body;
+app.post("/api/solicitudes", (req, res) => {
 
-    const sql = `
-      INSERT INTO solicitudes (nombre, telefono, correo, plan_id)
-      VALUES (?, ?, ?, ?)
-    `;
+  const { nombre, telefono, correo, plan_id } = req.body;
 
-    await db.query(sql, [nombre, telefono, correo, plan_id]);
-
-    res.json({ mensaje: "Solicitud guardada correctamente" });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error al guardar solicitud" });
+  if (!nombre || !telefono || !correo || !plan_id) {
+    return res.status(400).json({
+      error: "Datos incompletos"
+    });
   }
-});
 
+  const sql = `
+    INSERT INTO solicitudes (nombre, telefono, correo, plan_id)
+    VALUES (?, ?, ?, ?)
+  `;
 
-/* =========================
-   INICIAR SERVIDOR
-========================= */
+  db.query(sql, [
+    nombre,
+    telefono,
+    correo,
+    Number(plan_id) // 🔥 IMPORTANTE
+  ], (err, result) => {
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor desplegado en Railway (puerto ${PORT})`);
+    if (err) {
+      console.error("ERROR INSERTANDO SOLICITUD:", err);
+      return res.status(500).json({
+        error: "Error al guardar solicitud"
+      });
+    }
+
+    res.json({
+      success: true,
+      id: result.insertId
+    });
+
+  });
+
 });

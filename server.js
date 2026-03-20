@@ -1680,6 +1680,36 @@ app.get("/api/tickets", async (req, res) => {
     res.status(500).json({ error: "Error tickets" });
   }
 });
+
+app.get("/api/ingresos-mensuales", async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT MONTH(fecha) AS mes, SUM(monto) AS monto
+            FROM pagos
+            GROUP BY mes
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error("Error al obtener ingresos mensuales:", err);
+        res.status(500).json({ error: "Error obteniendo ingresos" });
+    }
+});
+
+app.get("/api/usuarios-roles", async (req, res) => {
+    try {
+        const [clientes] = await db.query("SELECT COUNT(*) FROM usuarios WHERE rol = 'cliente'");
+        const [administradores] = await db.query("SELECT COUNT(*) FROM usuarios WHERE rol = 'administrador'");
+
+        res.json({
+            clientes: clientes[0]['COUNT(*)'],
+            administradores: administradores[0]['COUNT(*)']
+        });
+    } catch (err) {
+        console.error("Error al obtener usuarios por roles:", err);
+        res.status(500).json({ error: "Error obteniendo roles" });
+    }
+});
+
 /* =========================
    INICIAR SERVIDOR
 ========================= */

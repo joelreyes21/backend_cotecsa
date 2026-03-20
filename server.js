@@ -15,7 +15,13 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+app.use((req, res, next) => {
+  if (req.originalUrl === "/webhook/stripe") {
+    next(); // no parsear
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 

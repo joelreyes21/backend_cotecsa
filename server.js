@@ -1691,6 +1691,38 @@ app.get("/api/usuarios", (req, res) => {
     res.json(results);
   });
 });
+
+/* =========================
+   ELIMINAR CONTRATO
+========================= */
+
+app.delete("/contratos/:id", (req, res) => {
+  const id = req.params.id;
+
+  // Verifica si el contrato existe antes de eliminarlo
+  const sqlCheck = "SELECT * FROM contratos WHERE id_contrato = ?";
+  db.query(sqlCheck, [id], (err, results) => {
+    if (err) {
+      console.error("Error al verificar contrato:", err);
+      return res.status(500).json({ error: "Error verificando contrato" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Contrato no encontrado" });
+    }
+
+    // Elimina el contrato
+    const sqlDelete = "DELETE FROM contratos WHERE id_contrato = ?";
+    db.query(sqlDelete, [id], (err) => {
+      if (err) {
+        console.error("Error al eliminar contrato:", err);
+        return res.status(500).json({ error: "Error al eliminar contrato" });
+      }
+
+      res.json({ mensaje: "Contrato eliminado correctamente" });
+    });
+  });
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

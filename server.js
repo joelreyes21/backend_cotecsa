@@ -15,7 +15,6 @@ app.use(cors({
   credentials: true
 }));
 
-app.use("/webhook/stripe", express.raw({ type: "application/json" }));
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
@@ -1093,48 +1092,30 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // 🔥 CUANDO EL PAGO SE COMPLETA
   if (event.type === "checkout.session.completed") {
 
     const session = event.data.object;
 
     const contrato_id = session.metadata.contrato_id;
-    const monto = session.amount_total / 100; // USD
+    const monto = session.amount_total / 100;
 
     console.log("💳 PAGO COMPLETADO:", contrato_id, monto);
 
-    // 🔥 GUARDAR EN TABLA PAGOS
-    const sql = `
-      INSERT INTO pagos (contrato_id, monto, fecha_pago, metodo_pago, estado)
-      VALUES (?, ?, NOW(), 'stripe', 'completado')
-    `;
+    db.query(
+      "INSERT INTO pagos (contrato_id, monto, fecha_pago, metodo_pago, estado) VALUES (?, ?, NOW(), 'stripe', 'completado')",
+      [contrato_id, monto]
+    );
 
-    db.query(sql, [contrato_id, monto], (err) => {
-      if (err) {
-        console.error("Error guardando pago:", err);
-      }
-    });
-
-    // 🔥 MARCAR FACTURA PAGADA
-    const updateFactura = `
-      UPDATE facturas
-      SET estado = 'pagado'
-      WHERE contrato_id = ?
-      AND estado = 'pendiente'
-      LIMIT 1
-    `;
-
-    db.query(updateFactura, [contrato_id], (err) => {
-      if (err) {
-        console.error("Error actualizando factura:", err);
-      }
-    });
-
+    db.query(
+      "UPDATE facturas SET estado = 'pagado' WHERE contrato_id = ? AND estado = 'pendiente' LIMIT 1",
+      [contrato_id]
+    );
   }
 
   res.json({ received: true });
 
 });
+
 /* =========================
    INICIAR SERVIDOR
 ========================= */

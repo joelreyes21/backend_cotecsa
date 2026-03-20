@@ -1196,6 +1196,7 @@ app.get("/api/pagos", (req, res) => {
 
 const PDFDocument = require("pdfkit");
 const path = require("path");
+const fs = require("fs");
 
 app.get("/api/factura/:id", (req, res) => {
 
@@ -1217,6 +1218,7 @@ app.get("/api/factura/:id", (req, res) => {
   db.query(sql, [id], (err, results) => {
 
     if (err || results.length === 0) {
+      console.error(err);
       return res.status(500).send("Error generando factura");
     }
 
@@ -1227,20 +1229,21 @@ app.get("/api/factura/:id", (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=factura_${id}.pdf`
+      `inline; filename=factura_${id}.pdf`
     );
 
     doc.pipe(res);
 
-    const logoPath = path.join(__dirname, "logo-cotecsa.png");
+    const logoPath = path.join(__dirname, "logo.png");
 
     // ================= HEADER =================
     doc.rect(0, 0, 612, 100).fill("#0a1f44");
 
-    // LOGO
-    doc.image(logoPath, 50, 25, { width: 80 });
+    // LOGO (no rompe si no existe)
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, 50, 25, { width: 80 });
+    }
 
-    // EMPRESA
     doc.fillColor("#ffffff")
       .fontSize(20)
       .text("COTECSA", 150, 35);
@@ -1283,47 +1286,56 @@ app.get("/api/factura/:id", (req, res) => {
 
     doc.moveDown(4);
 
+    // ================= MONEDA =================
+    const tasa = 26.48;
+
+    const montoUSD = parseFloat(data.monto);
+    const montoLPS = montoUSD * tasa;
+
+    const isv = montoLPS * 0.15;
+    const total = montoLPS + isv;
+
     // ================= TABLA =================
     const tableTop = doc.y;
 
-    // HEADER
-    doc.rect(50, tableTop, 500, 25)
-      .fill("#0a1f44");
+    doc.rect(50, tableTop, 500, 25).fill("#0a1f44");
 
     doc.fillColor("#fff")
       .fontSize(10)
       .text("Descripción", 60, tableTop + 7)
       .text("Cant.", 300, tableTop + 7)
-      .text("Precio", 370, tableTop + 7)
-      .text("Total", 460, tableTop + 7);
+      .text("USD", 370, tableTop + 7)
+      .text("Lempiras", 460, tableTop + 7);
 
     doc.fillColor("#000");
 
-    // FILA
     const rowY = tableTop + 30;
 
-    doc.rect(50, rowY, 500, 25)
-      .stroke("#ddd");
+    doc.rect(50, rowY, 500, 25).stroke("#ddd");
 
     doc.text("Servicio mensual COTECSA", 60, rowY + 7);
     doc.text("1", 300, rowY + 7);
-    doc.text(`L. ${data.monto}`, 370, rowY + 7);
-    doc.text(`L. ${data.monto}`, 460, rowY + 7);
+    doc.text(`$ ${montoUSD.toFixed(2)}`, 370, rowY + 7);
+    doc.text(`L. ${montoLPS.toFixed(2)}`, 460, rowY + 7);
 
     // ================= TOTALES =================
-    const subtotal = parseFloat(data.monto);
-    const isv = subtotal * 0.15;
-    const total = subtotal + isv;
-
     doc.moveDown(3);
 
     doc.fontSize(10)
-      .text(`Subtotal: L. ${subtotal.toFixed(2)}`, 350);
+      .text(`Subtotal: L. ${montoLPS.toFixed(2)}`, 350);
 
     doc.text(`ISV (15%): L. ${isv.toFixed(2)}`, 350);
 
     doc.fontSize(12)
       .text(`TOTAL: L. ${total.toFixed(2)}`, 350, doc.y + 5);
+
+    doc.moveDown();
+
+    doc.fontSize(9)
+      .fillColor("#666")
+      .text(`Tipo de cambio: 1 USD = L. ${tasa}`, 350);
+
+    doc.text(`Equivalente USD: $ ${montoUSD.toFixed(2)}`, 350);
 
     // ================= FOOTER =================
     doc.moveDown(4);
@@ -1336,17 +1348,10 @@ app.get("/api/factura/:id", (req, res) => {
 
     doc.fontSize(10)
       .fillColor("#555")
-      .text("Gracias por confiar en COTECSA", {
-        align: "center"
-      });
+      .text("Gracias por confiar en COTECSA", { align: "center" });
 
-    doc.text("Soporte: soporte@cotecsa.com", {
-        align: "center"
-      });
-
-    doc.text("Tel: +504 9999-9999", {
-        align: "center"
-      });
+    doc.text("Soporte: soporte@cotecsa.com", { align: "center" });
+    doc.text("Tel: +504 9495-2504", { align: "center" });
 
     doc.end();
 

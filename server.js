@@ -1672,6 +1672,25 @@ app.get("/api/usuarios-roles", (req, res) => {
     });
 });
 
+app.get("/api/usuarios", (req, res) => {
+  const sql = `
+    SELECT
+      id_usuario AS id,
+      nombre_completo AS nombre,
+      correo,
+      telefono,
+      rol
+    FROM usuarios
+  `;
+ 
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Error /api/usuarios:", err);
+      return res.status(500).json({ error: "Error al obtener usuarios" });
+    }
+    res.json(results);
+  });
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

@@ -1567,33 +1567,21 @@ app.post("/api/contacto", (req, res) => {
   const { nombre, telefono, correo, mensaje } = req.body;
 
   if (!nombre || !telefono || !correo || !mensaje) {
-    return res.status(400).json({ error: "Campos incompletos" });
+    return res.status(400).json({ message: "Campos incompletos" });
   }
 
-  const mensajeCompleto = `
-Nuevo mensaje de contacto:
-
-Nombre: ${nombre}
-Teléfono: ${telefono}
-Correo: ${correo}
-
-Mensaje:
-${mensaje}
-  `;
-
   const sql = `
-    INSERT INTO notificaciones (usuario_id, mensaje, leida)
-    VALUES (?, ?, 0)
+    INSERT INTO notificaciones (usuario_id, nombre, telefono, correo, mensaje, leida)
+    VALUES (?, ?, ?, ?, ?, 0)
   `;
 
-  // usuario_id = 1 (admin por ejemplo)
-  db.query(sql, [1, mensajeCompleto], (err, result) => {
+  db.query(sql, [1, nombre, telefono, correo, mensaje], (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ error: "Error al guardar" });
+      return res.status(500).json({ message: "Error al guardar" });
     }
 
-    res.json({ success: true });
+    res.status(200).json({ message: "Guardado correctamente" });
   });
 });
 /* =========================

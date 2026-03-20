@@ -1110,9 +1110,18 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
     console.log("💳 PAGO COMPLETADO:", contrato_id, monto);
 
     db.query(
-      "INSERT INTO pagos (contrato_id, monto, fecha_pago, metodo_pago, estado) VALUES (?, ?, NOW(), 'stripe', 'completado')",
-      [contrato_id, monto]
-    );
+  "INSERT INTO pagos (contrato_id, monto, fecha_pago, metodo_pago, estado) VALUES (?, ?, NOW(), 'stripe', 'completado')",
+  [contrato_id, monto],
+  (err, result) => {
+
+    if (err) {
+      console.error("❌ ERROR INSERTANDO PAGO:", err);
+    } else {
+      console.log("✅ PAGO INSERTADO:", result.insertId);
+    }
+
+  }
+);
 
     db.query(
       "UPDATE facturas SET estado = 'pagado' WHERE contrato_id = ? AND estado = 'pendiente' LIMIT 1",

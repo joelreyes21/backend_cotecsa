@@ -1193,6 +1193,8 @@ app.get("/api/pagos", (req, res) => {
   });
 
 });
+
+
 const PDFDocument = require("pdfkit");
 
 app.get("/api/factura/:id", (req, res) => {
@@ -1220,7 +1222,7 @@ app.get("/api/factura/:id", (req, res) => {
 
     const data = results[0];
 
-    const doc = new PDFDocument();
+    const doc = new PDFDocument({ margin: 50 });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
@@ -1230,40 +1232,85 @@ app.get("/api/factura/:id", (req, res) => {
 
     doc.pipe(res);
 
-    // 🔥 LOGO (si tenés uno)
-    // doc.image("logo.png", 50, 45, { width: 100 });
+    // ================= HEADER =================
+    doc.rect(0, 0, 612, 90).fill("#0a1f44");
 
-    doc.fontSize(20).text("COTECSA", 50, 50);
-    doc.fontSize(12).text("Internet & Cable", 50, 70);
+    doc.fillColor("#ffffff")
+      .fontSize(20)
+      .text("COTECSA", 50, 30);
+
+    doc.fontSize(10)
+      .text("Internet & Cable", 50, 55);
+
+    doc.fillColor("#000");
+
+    // ================= FACTURA TITLE =================
+    doc.moveDown(2);
+    doc.fontSize(18).text("FACTURA", { align: "right" });
+
+    doc.fontSize(10).text(`No: FAC-2026-${id}`, { align: "right" });
 
     doc.moveDown();
 
-    doc.fontSize(16).text("FACTURA", { align: "center" });
+    // ================= INFO CLIENTE =================
+    doc.fontSize(12).text("Datos del Cliente", { underline: true });
 
-    doc.moveDown();
+    doc.moveDown(0.5);
 
-    doc.fontSize(12).text(`Cliente: ${data.cliente}`);
+    doc.text(`Nombre: ${data.cliente}`);
     doc.text(`Contrato: ${data.numero_contrato}`);
     doc.text(`Fecha: ${new Date(data.fecha_pago).toLocaleDateString()}`);
 
-    doc.moveDown();
-
-    doc.text("Detalle:", { underline: true });
-
-    doc.moveDown();
-
-    doc.text(`Servicio mensual COTECSA`);
-    doc.text(`Monto: L. ${data.monto}`);
-
     doc.moveDown(2);
 
-    doc.text("Gracias por su pago", { align: "center" });
+    // ================= TABLA =================
+
+    const tableTop = doc.y;
+
+    doc.fontSize(12).text("Descripción", 50, tableTop);
+    doc.text("Cantidad", 300, tableTop);
+    doc.text("Precio", 380, tableTop);
+    doc.text("Total", 460, tableTop);
+
+    doc.moveTo(50, tableTop + 15)
+      .lineTo(550, tableTop + 15)
+      .stroke();
+
+    const rowY = tableTop + 25;
+
+    doc.text("Servicio mensual COTECSA", 50, rowY);
+    doc.text("1", 300, rowY);
+    doc.text(`L. ${data.monto}`, 380, rowY);
+    doc.text(`L. ${data.monto}`, 460, rowY);
+
+    doc.moveDown(4);
+
+    // ================= TOTAL =================
+    doc.fontSize(14)
+      .text(`TOTAL: L. ${data.monto}`, 400, doc.y, {
+        align: "right"
+      });
+
+    doc.moveDown(3);
+
+    // ================= FOOTER =================
+    doc.fontSize(10)
+      .fillColor("#555")
+      .text("Gracias por confiar en COTECSA", {
+        align: "center"
+      });
+
+    doc.text("Soporte: soporte@cotecsa.com", {
+      align: "center"
+    });
 
     doc.end();
 
   });
 
 });
+
+
 /* =========================
    INICIAR SERVIDOR
 ========================= */

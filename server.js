@@ -1512,6 +1512,32 @@ app.post("/api/solicitudes/email", async (req, res) => {
 
 });
 
+app.delete("/api/solicitudes/:id", (req, res) => {
+
+  const id = req.params.id;
+
+  const sql = `
+    DELETE FROM solicitudes
+    WHERE id = ?
+  `;
+
+  db.query(sql, [id], (err, result) => {
+
+    if (err) {
+      console.error("ERROR ELIMINANDO:", err);
+      return res.status(500).json({
+        error: "Error eliminando solicitud"
+      });
+    }
+
+    res.json({
+      success: true,
+      mensaje: "Solicitud eliminada"
+    });
+
+  });
+
+});
 /* =========================
    INICIAR SERVIDOR
 ========================= */

@@ -1234,7 +1234,7 @@ app.get("/api/factura/:id", (req, res) => {
 
     doc.pipe(res);
 
-    const logoPath = path.join(__dirname, "logo.png");
+    const logoPath = path.join(__dirname, "logo-cotecsa.png");
 
     // ================= HEADER =================
     doc.rect(0, 0, 612, 100).fill("#0a1f44");

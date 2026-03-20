@@ -1166,18 +1166,15 @@ app.get("/api/pagos", async (req, res) => {
         p.monto,
         p.fecha_pago,
         p.estado,
-        c.id AS contrato_id,
-        u.nombre AS cliente
+        p.contrato_id
       FROM pagos p
-      INNER JOIN contratos c ON p.contrato_id = c.id
-      INNER JOIN usuarios u ON c.cliente_id = u.id
       ORDER BY p.fecha_pago DESC
     `);
 
     res.json(rows);
 
   } catch (error) {
-    console.error(error);
+    console.error("ERROR PAGOS:", error); // 🔥 IMPORTANTE
     res.status(500).json({ error: "Error obteniendo pagos" });
   }
 });

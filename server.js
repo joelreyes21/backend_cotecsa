@@ -1359,7 +1359,7 @@ app.get("/api/factura/:id", (req, res) => {
 
 });
 
-app.post("/api/solicitudes", async (req, res) => {
+app.post("/api/solicitudes", (req, res) => {
 
   const { nombre, telefono, correo, plan_id } = req.body;
 
@@ -1367,106 +1367,70 @@ app.post("/api/solicitudes", async (req, res) => {
     return res.status(400).json({ error: "Faltan datos" });
   }
 
-  try {
+  // 🔥 1. GUARDAR
+  const sql = `
+    INSERT INTO solicitudes (nombre, telefono, correo, plan_id)
+    VALUES (?, ?, ?, ?)
+  `;
 
-    // 🔥 1. GUARDAR EN DB
-    const [result] = await db.query(`
-      INSERT INTO solicitudes (nombre, telefono, correo, plan_id)
-      VALUES (?, ?, ?, ?)
-    `, [nombre, telefono, correo, plan_id]);
+  db.query(sql, [nombre, telefono, correo, plan_id], (err, result) => {
 
+    if (err) {
+      console.error("ERROR DB:", err);
+      return res.status(500).json({ error: "Error al guardar solicitud" });
+    }
 
-
-    // 🔥 2. OBTENER INFO DEL PLAN
-    const [planRows] = await db.query(`
-      SELECT nombre, precio FROM planes WHERE id = ?
-    `, [plan_id]);
-
-    const plan = planRows[0];
-
-
-
-    // 🔥 3. ENVIAR CORREO AUTOMÁTICO
-    await resend.emails.send({
-
-      from: "COTECSA <noreply@cotecsa.shop>",
-
-      to: correo,
-
-      subject: "Hemos recibido tu solicitud 📡",
-
-      html: `
-        <div style="font-family:Segoe UI; padding:20px;">
-
-          <h2 style="color:#0a1f44;">COTECSA</h2>
-
-          <p>Hola <b>${nombre}</b>,</p>
-
-          <p>
-            Gracias por comunicarte con nosotros 🙌<br>
-            Hemos recibido tu solicitud del plan:
-          </p>
-
-          <p style="font-size:18px; font-weight:bold;">
-            ${plan.nombre} - L ${plan.precio}
-          </p>
-
-          <p>
-            Nuestro equipo se pondrá en contacto contigo muy pronto 📞
-          </p>
-
-          <hr>
-
-          <small style="color:#888;">
-            Este es un mensaje automático, no es necesario responder.
-          </small>
-
-        </div>
-      `
-    });
-
-
-
+    // 🔥 RESPONDER AL FRONTEND PRIMERO
     res.json({
       success: true,
       id: result.insertId
     });
 
-  } catch (error) {
+    // 🔥 2. CORREO (NO ROMPE SI FALLA)
+    const sqlPlan = `
+      SELECT nombre, precio FROM planes WHERE id_plan = ?
+    `;
 
-    console.error("ERROR SOLICITUD:", error);
+    db.query(sqlPlan, [plan_id], async (err, planRows) => {
 
-    res.status(500).json({
-      error: "Error al guardar solicitud"
+      if (err || planRows.length === 0) {
+        console.error("ERROR PLAN:", err);
+        return;
+      }
+
+      const plan = planRows[0];
+
+      try {
+
+        await resend.emails.send({
+          from: "COTECSA <noreply@cotecsa.shop>",
+          to: correo,
+          subject: "Hemos recibido tu solicitud 📡",
+          html: `
+            <h2>COTECSA</h2>
+
+            <p>Hola <b>${nombre}</b>,</p>
+
+            <p>Gracias por comunicarte con nosotros </p>
+
+            <p>Plan solicitado:</p>
+
+            <b>${plan.nombre} - L ${plan.precio}</b>
+
+            <p>Pronto nos pondremos en contacto contigo 📞</p>
+          `
+        });
+
+      } catch (error) {
+        console.error("ERROR CORREO:", error);
+      }
+
     });
-
-  }
-
-});
-
-app.get("/api/solicitudes", (req, res) => {
-
-  const sql = `
-    SELECT s.*, p.nombre AS plan_nombre, p.precio
-    FROM solicitudes s
-    JOIN planes p ON s.plan_id = p.id_plan
-    ORDER BY s.id DESC
-  `;
-
-  db.query(sql, (err, results) => {
-
-    if (err) {
-      console.error("ERROR OBTENIENDO SOLICITUDES:", err);
-      return res.status(500).json({
-        error: "Error obteniendo solicitudes"
-      });
-    }
-
-    res.json(results);
 
   });
 
 });
+
 
 app.get("/api/solicitudes", (req, res) => {
 

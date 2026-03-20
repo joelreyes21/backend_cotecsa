@@ -1098,6 +1098,8 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+
+  console.log("EVENTO:", event.type);
   if (event.type === "checkout.session.completed") {
 
     const session = event.data.object;
